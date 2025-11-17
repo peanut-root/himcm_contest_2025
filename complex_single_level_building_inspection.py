@@ -254,7 +254,10 @@ class ComplexBuildingInspection:
         ax.legend(loc='upper right', fontsize=10)
         ax.grid(True, alpha=0.3)
         
-        plt.savefig('./complex_single_level_building_inspection.png', dpi=300, bbox_inches='tight')
+        # 调整布局以显示完整图例
+        plt.subplots_adjust(right=0.75)
+        plt.savefig('./output/complex_single_level_building_inspection.png', 
+                   dpi=300, bbox_inches='tight', facecolor='white')
         plt.show()
     
     def print_results(self, person1, person2):
