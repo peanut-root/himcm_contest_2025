@@ -297,7 +297,7 @@ class ComplexBuildingInspection:
         
         # 调整布局以显示完整图例
         plt.subplots_adjust(right=0.75)
-        plt.savefig('/Users/peanut/Documents/himcm/algorithm/complex_single_level_building_inspection.png', 
+        plt.savefig('./complex_single_level_building_inspection.png', 
                    dpi=300, bbox_inches='tight', facecolor='white')
         plt.show()
     

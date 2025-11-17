@@ -94,7 +94,7 @@ class RoomInspectionGreedy:
         return None
     
     def calculate_distance(self, pos1: float, pos2: float) -> float:
-        """计算两点之间的距离（沿走廊）"""
+        """计算两点之间的距离（沿走廊，不能穿墙）"""
         return abs(pos1 - pos2)
     
     def greedy_assign_rooms(self, 
@@ -276,12 +276,15 @@ class RoomInspectionGreedy:
     
     def _assign_room_to_person(self, person: Person, room_name: str, 
                                distance: float, hallway_speed: float, room_speed: float):
-        """将房间分配给人员，更新位置和时间"""
+        """将房间分配给人员，更新位置和时间（确保不穿墙）"""
         room = self.get_room_by_name(room_name)
+        
+        # 计算走廊移动距离（不能穿墙，必须沿走廊移动）
+        hallway_distance = abs(person.current_position - room.distance_from_exit1)
         
         # 计算时间
         # 走廊移动时间（秒）
-        hallway_move_time = distance / hallway_speed
+        hallway_move_time = hallway_distance / hallway_speed
         
         # 房间内移动时间（进入和离开房间，假设房间深度2米，来回4米）
         room_enter_exit_distance = 4.0  # 进入和离开房间的总距离
@@ -290,11 +293,11 @@ class RoomInspectionGreedy:
         # 房间检查时间（秒）
         inspection_time_seconds = room.inspection_time
         
-        # 更新距离和时间
-        person.total_distance += distance
+        # 更新距离和时间（只计算走廊移动距离，房间内移动不计入总移动距离）
+        person.total_distance += hallway_distance
         person.total_time += hallway_move_time + room_move_time + inspection_time_seconds
         
-        # 更新位置
+        # 更新位置（检查完房间后，人员回到走廊中房间门口的位置）
         person.current_position = room.distance_from_exit1
         
         # 记录路径（用于可视化）
