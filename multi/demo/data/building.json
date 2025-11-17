@@ -1,0 +1,210 @@
+{
+  "id": "office-6-room",
+  "name": "Basic 6-Room Office",
+  "description": "Standard office layout with 6 rooms, 2 exits, and central hallway",
+  "nodes": [
+    {
+      "id": "exit-left",
+      "type": "EXIT",
+      "x": 50,
+      "y": 300,
+      "label": "Exit L"
+    },
+    {
+      "id": "exit-right",
+      "type": "EXIT",
+      "x": 750,
+      "y": 300,
+      "label": "Exit R"
+    },
+    {
+      "id": "hallway",
+      "type": "CORRIDOR",
+      "x": 400,
+      "y": 300,
+      "label": "Hallway"
+    },
+    {
+      "id": "door-R1",
+      "type": "DOOR",
+      "x": 190,
+      "y": 110
+    },
+    {
+      "id": "door-R2",
+      "type": "DOOR",
+      "x": 400,
+      "y": 110
+    },
+    {
+      "id": "door-R3",
+      "type": "DOOR",
+      "x": 610,
+      "y": 110
+    },
+    {
+      "id": "door-R4",
+      "type": "DOOR",
+      "x": 190,
+      "y": 490
+    },
+    {
+      "id": "door-R5",
+      "type": "DOOR",
+      "x": 400,
+      "y": 490
+    },
+    {
+      "id": "door-R6",
+      "type": "DOOR",
+      "x": 610,
+      "y": 490
+    }
+  ],
+  "rooms": [
+    {
+      "id": "R1",
+      "doorNode": "door-R1",
+      "label": "Office 1",
+      "x": 100,
+      "y": 50,
+      "width": 180,
+      "height": 120
+    },
+    {
+      "id": "R2",
+      "doorNode": "door-R2",
+      "label": "Office 2",
+      "x": 310,
+      "y": 50,
+      "width": 180,
+      "height": 120
+    },
+    {
+      "id": "R3",
+      "doorNode": "door-R3",
+      "label": "Office 3",
+      "x": 520,
+      "y": 50,
+      "width": 180,
+      "height": 120
+    },
+    {
+      "id": "R4",
+      "doorNode": "door-R4",
+      "label": "Office 4",
+      "x": 100,
+      "y": 430,
+      "width": 180,
+      "height": 120
+    },
+    {
+      "id": "R5",
+      "doorNode": "door-R5",
+      "label": "Office 5",
+      "x": 310,
+      "y": 430,
+      "width": 180,
+      "height": 120
+    },
+    {
+      "id": "R6",
+      "doorNode": "door-R6",
+      "label": "Office 6",
+      "x": 520,
+      "y": 430,
+      "width": 180,
+      "height": 120
+    }
+  ],
+  "hallway": {
+    "x": 50,
+    "y": 250,
+    "width": 700,
+    "height": 100
+  },
+  "edges": [
+    {
+      "from": "exit-left",
+      "to": "hallway",
+      "distance": 1
+    },
+    {
+      "from": "hallway",
+      "to": "exit-right",
+      "distance": 1
+    },
+    {
+      "from": "hallway",
+      "to": "door-R1",
+      "distance": 1
+    },
+    {
+      "from": "hallway",
+      "to": "door-R2",
+      "distance": 1
+    },
+    {
+      "from": "hallway",
+      "to": "door-R3",
+      "distance": 1
+    },
+    {
+      "from": "hallway",
+      "to": "door-R4",
+      "distance": 1
+    },
+    {
+      "from": "hallway",
+      "to": "door-R5",
+      "distance": 1
+    },
+    {
+      "from": "hallway",
+      "to": "door-R6",
+      "distance": 1
+    },
+    {
+      "from": "door-R1",
+      "to": "door-R2",
+      "distance": 5,
+      "comment": "Adjacent rooms on top row"
+    },
+    {
+      "from": "door-R2",
+      "to": "door-R3",
+      "distance": 5,
+      "comment": "Adjacent rooms on top row"
+    },
+    {
+      "from": "door-R4",
+      "to": "door-R5",
+      "distance": 5,
+      "comment": "Adjacent rooms on bottom row"
+    },
+    {
+      "from": "door-R5",
+      "to": "door-R6",
+      "distance": 5,
+      "comment": "Adjacent rooms on bottom row"
+    },
+    {
+      "from": "door-R1",
+      "to": "door-R4",
+      "distance": 6,
+      "comment": "Vertical connection between R1 and R4"
+    },
+    {
+      "from": "door-R2",
+      "to": "door-R5",
+      "distance": 6,
+      "comment": "Vertical connection between R2 and R5"
+    },
+    {
+      "from": "door-R3",
+      "to": "door-R6",
+      "distance": 6,
+      "comment": "Vertical connection between R3 and R6"
+    }
+  ]
+}

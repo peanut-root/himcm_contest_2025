@@ -1,0 +1,293 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://firefighter-patrol-optimization.example.com/schemas/mission-output.json",
+  "title": "Mission Output",
+  "description": "JSON schema for mission planning results with routes, metrics, and validation",
+  "type": "object",
+  "required": ["missionId", "makespan", "routes", "metrics", "validation"],
+  "properties": {
+    "missionId": {
+      "type": "string",
+      "description": "Unique mission identifier",
+      "minLength": 1
+    },
+    "makespan": {
+      "type": "number",
+      "description": "T_max: maximum agent completion time",
+      "minimum": 0
+    },
+    "routes": {
+      "type": "array",
+      "description": "One route per agent",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["agentId", "actions", "roomsInspected", "totalTime", "pathLength", "clearanceOperations"],
+        "properties": {
+          "agentId": {
+            "type": "string",
+            "description": "Agent identifier",
+            "minLength": 1
+          },
+          "actions": {
+            "type": "array",
+            "description": "Ordered sequence of actions",
+            "items": {
+              "type": "object",
+              "required": ["type", "startTime", "duration", "endTime", "location"],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["MOVE", "CLEAR", "ENTER", "INSPECT", "EXIT_ROOM", "WAIT"],
+                  "description": "Action type"
+                },
+                "startTime": {
+                  "type": "number",
+                  "description": "When action begins (seconds from mission start)",
+                  "minimum": 0
+                },
+                "duration": {
+                  "type": "number",
+                  "description": "How long action takes",
+                  "minimum": 0
+                },
+                "endTime": {
+                  "type": "number",
+                  "description": "When action completes",
+                  "minimum": 0
+                },
+                "location": {
+                  "type": "string",
+                  "description": "Node or Room ID where action occurs",
+                  "minLength": 1
+                },
+                "targetRoom": {
+                  "type": "string",
+                  "description": "Room ID (for ENTER, INSPECT, EXIT_ROOM)"
+                },
+                "edge": {
+                  "type": "string",
+                  "description": "Edge ID (for MOVE actions)"
+                },
+                "clearedEdge": {
+                  "type": "boolean",
+                  "description": "Did this MOVE clear an edge?"
+                },
+                "waitReason": {
+                  "type": "string",
+                  "description": "Explanation for WAIT actions"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "roomsInspected": {
+            "type": "array",
+            "description": "List of room IDs inspected by this agent",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "totalTime": {
+            "type": "number",
+            "description": "Total mission time for this agent",
+            "minimum": 0
+          },
+          "pathLength": {
+            "type": "number",
+            "description": "Total distance/time traveled",
+            "minimum": 0
+          },
+          "clearanceOperations": {
+            "type": "integer",
+            "description": "Count of edges cleared by this agent",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "required": ["makespan", "individualTimes", "totalPathLength", "redundancyCoverage", "clearanceEfficiency", "loadBalance"],
+      "properties": {
+        "makespan": {
+          "type": "number",
+          "minimum": 0
+        },
+        "individualTimes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["agentId", "completionTime"],
+            "properties": {
+              "agentId": {"type": "string"},
+              "completionTime": {"type": "number", "minimum": 0}
+            }
+          }
+        },
+        "totalPathLength": {
+          "type": "number",
+          "minimum": 0
+        },
+        "redundancyCoverage": {
+          "type": "object",
+          "required": ["required", "completed", "rate"],
+          "properties": {
+            "required": {"type": "integer", "minimum": 0},
+            "completed": {"type": "integer", "minimum": 0},
+            "rate": {"type": "number", "minimum": 0, "maximum": 1}
+          }
+        },
+        "clearanceEfficiency": {
+          "type": "object",
+          "required": ["edgesCleared", "totalEdgeTraversals", "rate"],
+          "properties": {
+            "edgesCleared": {"type": "integer", "minimum": 0},
+            "totalEdgeTraversals": {"type": "integer", "minimum": 0},
+            "rate": {"type": "number", "minimum": 0, "maximum": 1}
+          }
+        },
+        "loadBalance": {
+          "type": "object",
+          "required": ["mean", "stdDev", "maxDeviation"],
+          "properties": {
+            "mean": {"type": "number", "minimum": 0},
+            "stdDev": {"type": "number", "minimum": 0},
+            "maxDeviation": {"type": "number", "minimum": 0}
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "validation": {
+      "type": "object",
+      "required": ["valid", "coverage", "redundancy", "conflicts", "returnToExit", "errors"],
+      "properties": {
+        "valid": {
+          "type": "boolean",
+          "description": "Overall validation result"
+        },
+        "coverage": {
+          "type": "object",
+          "required": ["allRoomsInspected", "missingRooms"],
+          "properties": {
+            "allRoomsInspected": {"type": "boolean"},
+            "missingRooms": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          }
+        },
+        "redundancy": {
+          "type": "object",
+          "required": ["redundancySatisfied", "insufficientInspections"],
+          "properties": {
+            "redundancySatisfied": {"type": "boolean"},
+            "insufficientInspections": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["roomId", "inspectionCount"],
+                "properties": {
+                  "roomId": {"type": "string"},
+                  "inspectionCount": {"type": "integer", "minimum": 0}
+                }
+              }
+            }
+          }
+        },
+        "conflicts": {
+          "type": "object",
+          "required": ["noRoomConflicts", "conflictingActions"],
+          "properties": {
+            "noRoomConflicts": {"type": "boolean"},
+            "conflictingActions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["agent1", "agent2", "roomId", "time"],
+                "properties": {
+                  "agent1": {"type": "string"},
+                  "agent2": {"type": "string"},
+                  "roomId": {"type": "string"},
+                  "time": {"type": "number"}
+                }
+              }
+            }
+          }
+        },
+        "returnToExit": {
+          "type": "object",
+          "required": ["allReturned", "failedReturns"],
+          "properties": {
+            "allReturned": {"type": "boolean"},
+            "failedReturns": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          }
+        },
+        "errors": {
+          "type": "array",
+          "description": "List of validation error messages",
+          "items": {"type": "string"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "timeline": {
+      "type": "object",
+      "description": "Optional timeline visualization data",
+      "required": ["agents", "events", "duration"],
+      "properties": {
+        "agents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["agentId", "activities"],
+            "properties": {
+              "agentId": {"type": "string"},
+              "activities": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["startTime", "endTime", "label", "type"],
+                  "properties": {
+                    "startTime": {"type": "number"},
+                    "endTime": {"type": "number"},
+                    "label": {"type": "string"},
+                    "type": {"type": "string"},
+                    "color": {"type": "string"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["time", "description"],
+            "properties": {
+              "time": {"type": "number"},
+              "description": {"type": "string"},
+              "agents": {
+                "type": "array",
+                "items": {"type": "string"}
+              }
+            }
+          }
+        },
+        "duration": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

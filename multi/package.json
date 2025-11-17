@@ -1,0 +1,63 @@
+{
+  "name": "firefighter-patrol-optimization",
+  "version": "1.0.0",
+  "description": "Emergency response patrol route optimization system for firefighter building inspection",
+  "main": "dist/index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "cli": "node --loader ts-node/esm src/cli/index.ts",
+    "plan": "npm run cli -- plan",
+    "validate": "npm run cli -- validate",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "example": "npm run cli -- plan -b examples/basic-6-room.json -a 2 -o results.json",
+    "example:redundancy": "npm run cli -- plan -b examples/redundancy-scenario.json -a 3 -r R1,R3 -o redundancy-results.json",
+    "example:return": "npm run cli -- plan -b examples/return-to-exit-scenario.json -a 2 --return-to-exit -o return-results.json",
+    "example:combined": "npm run cli -- plan -b examples/basic-6-room.json -a 2 -r R1,R3 --return-to-exit -o combined-results.json",
+    "visualize": "npm run cli -- visualize",
+    "viz:basic": "npm run cli -- visualize results.json -o timeline",
+    "viz:redundancy": "npm run cli -- visualize redundancy-results.json -o redundancy-timeline",
+    "viz:return": "npm run cli -- visualize return-results.json -o return-timeline",
+    "viz:combined": "npm run cli -- visualize combined-results.json -o combined-timeline",
+    "benchmark": "npm run cli -- benchmark",
+    "example:multi": "npm run cli -- plan -b examples/multi-agent-scenario.json -a 5 -r R1,R6,R7 --return-to-exit -o multi-results.json"
+  },
+  "keywords": [
+    "firefighter",
+    "patrol",
+    "optimization",
+    "pathfinding",
+    "graph",
+    "emergency-response",
+    "HiMCM"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "chalk": "^5.6.2",
+    "commander": "^14.0.2",
+    "graphology": "^0.26.0",
+    "javascript-lp-solver": "^0.4.24"
+  },
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^11.12.0",
+    "@types/node": "^20.19.25",
+    "@typescript-eslint/eslint-plugin": "^8.46.4",
+    "@typescript-eslint/parser": "^8.46.4",
+    "@vitest/ui": "^4.0.8",
+    "eslint": "^9.39.1",
+    "prettier": "^3.6.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "id": "warehouse-complex",
+  "nodes": [
+    {"id": "exit-main", "kind": "EXIT", "x": 0, "y": 20, "label": "Main Exit"},
+    {"id": "exit-emergency", "kind": "EXIT", "x": 80, "y": 20, "label": "Emergency Exit"},
+    {"id": "corridor-central", "kind": "CORRIDOR", "x": 40, "y": 20},
+    {"id": "corridor-west", "kind": "CORRIDOR", "x": 20, "y": 20},
+    {"id": "corridor-east", "kind": "CORRIDOR", "x": 60, "y": 20},
+    {"id": "door-W1", "kind": "DOOR", "x": 10, "y": 30, "label": "West Storage 1"},
+    {"id": "door-W2", "kind": "DOOR", "x": 20, "y": 30, "label": "West Storage 2"},
+    {"id": "door-E1", "kind": "DOOR", "x": 60, "y": 30, "label": "East Storage 1"},
+    {"id": "door-E2", "kind": "DOOR", "x": 70, "y": 30, "label": "East Storage 2"}
+  ],
+  "edges": [
+    {"id": "e1", "from": "exit-main", "to": "corridor-west", "baseTime": 15},
+    {"id": "e2", "from": "corridor-west", "to": "corridor-central", "baseTime": 15},
+    {"id": "e3", "from": "corridor-central", "to": "corridor-east", "baseTime": 15},
+    {"id": "e4", "from": "corridor-east", "to": "exit-emergency", "baseTime": 15},
+    {"id": "e5", "from": "corridor-west", "to": "door-W1", "baseTime": 10},
+    {"id": "e6", "from": "corridor-west", "to": "door-W2", "baseTime": 5},
+    {"id": "e7", "from": "corridor-east", "to": "door-E1", "baseTime": 5},
+    {"id": "e8", "from": "corridor-east", "to": "door-E2", "baseTime": 10}
+  ],
+  "rooms": [
+    {"id": "W1", "doorNode": "door-W1", "verifyTime": 40, "label": "West Storage Warehouse 1"},
+    {"id": "W2", "doorNode": "door-W2", "verifyTime": 35, "label": "West Storage Warehouse 2"},
+    {"id": "E1", "doorNode": "door-E1", "verifyTime": 35, "label": "East Storage Warehouse 1"},
+    {"id": "E2", "doorNode": "door-E2", "verifyTime": 40, "label": "East Storage Warehouse 2"}
+  ],
+  "entrances": ["exit-main"],
+  "exits": ["exit-main", "exit-emergency"],
+  "metadata": {
+    "name": "Warehouse Complex",
+    "description": "Large warehouse complex with west and east wings, requiring firefighters to return to nearest exit after inspection for safe evacuation tracking"
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "id": "office-redundancy",
+  "nodes": [
+    {"id": "exit-north", "kind": "EXIT", "x": 0, "y": 5},
+    {"id": "exit-south", "kind": "EXIT", "x": 60, "y": 5},
+    {"id": "corridor-1", "kind": "CORRIDOR", "x": 10, "y": 5},
+    {"id": "corridor-2", "kind": "CORRIDOR", "x": 20, "y": 5},
+    {"id": "corridor-3", "kind": "CORRIDOR", "x": 30, "y": 5},
+    {"id": "corridor-4", "kind": "CORRIDOR", "x": 40, "y": 5},
+    {"id": "corridor-5", "kind": "CORRIDOR", "x": 50, "y": 5},
+    {"id": "door-R1", "kind": "DOOR", "x": 10, "y": 10, "label": "Server Room Door"},
+    {"id": "door-R2", "kind": "DOOR", "x": 20, "y": 10, "label": "Office 2 Door"},
+    {"id": "door-R3", "kind": "DOOR", "x": 30, "y": 10, "label": "Chemical Storage Door"},
+    {"id": "door-R4", "kind": "DOOR", "x": 10, "y": 0, "label": "Office 4 Door"},
+    {"id": "door-R5", "kind": "DOOR", "x": 20, "y": 0, "label": "Office 5 Door"},
+    {"id": "door-R6", "kind": "DOOR", "x": 30, "y": 0, "label": "Office 6 Door"}
+  ],
+  "edges": [
+    {"id": "e1", "from": "exit-north", "to": "corridor-1", "baseTime": 10},
+    {"id": "e2", "from": "corridor-1", "to": "corridor-2", "baseTime": 10},
+    {"id": "e3", "from": "corridor-2", "to": "corridor-3", "baseTime": 10},
+    {"id": "e4", "from": "corridor-3", "to": "corridor-4", "baseTime": 10},
+    {"id": "e5", "from": "corridor-4", "to": "corridor-5", "baseTime": 10},
+    {"id": "e6", "from": "corridor-5", "to": "exit-south", "baseTime": 10},
+    {"id": "e7", "from": "corridor-1", "to": "door-R1", "baseTime": 5},
+    {"id": "e8", "from": "corridor-2", "to": "door-R2", "baseTime": 5},
+    {"id": "e9", "from": "corridor-3", "to": "door-R3", "baseTime": 5},
+    {"id": "e10", "from": "corridor-1", "to": "door-R4", "baseTime": 5},
+    {"id": "e11", "from": "corridor-2", "to": "door-R5", "baseTime": 5},
+    {"id": "e12", "from": "corridor-3", "to": "door-R6", "baseTime": 5}
+  ],
+  "rooms": [
+    {"id": "R1", "doorNode": "door-R1", "verifyTime": 45, "redundancy": true, "label": "Server Room (Critical - Redundant Inspection Required)"},
+    {"id": "R2", "doorNode": "door-R2", "verifyTime": 30, "label": "Office 2"},
+    {"id": "R3", "doorNode": "door-R3", "verifyTime": 50, "redundancy": true, "label": "Chemical Storage (Critical - Redundant Inspection Required)"},
+    {"id": "R4", "doorNode": "door-R4", "verifyTime": 30, "label": "Office 4"},
+    {"id": "R5", "doorNode": "door-R5", "verifyTime": 30, "label": "Office 5"},
+    {"id": "R6", "doorNode": "door-R6", "verifyTime": 30, "label": "Office 6"}
+  ],
+  "entrances": ["exit-north", "exit-south"],
+  "exits": ["exit-north", "exit-south"],
+  "metadata": {
+    "name": "Office Building with Critical Rooms",
+    "description": "6-room office with server room and chemical storage requiring redundant inspection by 2 different firefighters for safety verification"
+  }
+}

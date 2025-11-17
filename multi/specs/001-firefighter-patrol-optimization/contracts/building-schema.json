@@ -1,0 +1,183 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://firefighter-patrol-optimization.example.com/schemas/building.json",
+  "title": "Building Configuration",
+  "description": "JSON schema for building topology configuration used in firefighter patrol optimization",
+  "type": "object",
+  "required": ["id", "nodes", "edges", "rooms", "entrances", "exits"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for this building configuration",
+      "minLength": 1
+    },
+    "nodes": {
+      "type": "array",
+      "description": "All locations in the building (corridors, doors, exits)",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "x", "y"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique node identifier",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["CORRIDOR", "DOOR", "EXIT"],
+            "description": "Type of node"
+          },
+          "x": {
+            "type": "number",
+            "description": "X coordinate",
+            "minimum": 0
+          },
+          "y": {
+            "type": "number",
+            "description": "Y coordinate",
+            "minimum": 0
+          },
+          "label": {
+            "type": "string",
+            "description": "Optional human-readable label"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "edges": {
+      "type": "array",
+      "description": "All connections between nodes",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "from", "to", "baseTime"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique edge identifier",
+            "minLength": 1
+          },
+          "from": {
+            "type": "string",
+            "description": "Source node ID",
+            "minLength": 1
+          },
+          "to": {
+            "type": "string",
+            "description": "Target node ID",
+            "minLength": 1
+          },
+          "baseTime": {
+            "type": "number",
+            "description": "Base traversal time (always incurred)",
+            "exclusiveMinimum": 0
+          },
+          "firstUseClearTime": {
+            "type": "number",
+            "description": "Additional time for first-use clearance (optional)",
+            "minimum": 0
+          },
+          "cleared": {
+            "type": "boolean",
+            "description": "Initial clearance state (default: false)"
+          },
+          "bidirectional": {
+            "type": "boolean",
+            "description": "Can traverse in both directions (default: true)"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "rooms": {
+      "type": "array",
+      "description": "All inspection targets",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "doorNode", "verifyTime"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique room identifier",
+            "minLength": 1
+          },
+          "doorNode": {
+            "type": "string",
+            "description": "Node ID of door providing access",
+            "minLength": 1
+          },
+          "verifyTime": {
+            "type": "number",
+            "description": "Time required to inspect this room",
+            "exclusiveMinimum": 0
+          },
+          "redundancy": {
+            "type": "boolean",
+            "description": "Requires 2 inspections by different agents (default: false)"
+          },
+          "label": {
+            "type": "string",
+            "description": "Optional human-readable name"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "entrances": {
+      "type": "array",
+      "description": "Node IDs designated as entrances (subset of nodes with kind=EXIT)",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "exits": {
+      "type": "array",
+      "description": "Node IDs designated as exits (subset of nodes with kind=EXIT)",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Optional metadata about the building",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Building name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Building description"
+        },
+        "floor": {
+          "type": "integer",
+          "description": "Floor number (for future multi-floor support)"
+        },
+        "dimensions": {
+          "type": "object",
+          "properties": {
+            "width": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "height": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          },
+          "required": ["width", "height"]
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

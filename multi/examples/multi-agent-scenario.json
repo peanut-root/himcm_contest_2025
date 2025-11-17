@@ -1,0 +1,65 @@
+{
+  "id": "large-facility",
+  "nodes": [
+    {"id": "exit-north", "kind": "EXIT", "x": 0, "y": 50, "label": "North Exit"},
+    {"id": "exit-south", "kind": "EXIT", "x": 100, "y": 50, "label": "South Exit"},
+    {"id": "exit-east", "kind": "EXIT", "x": 50, "y": 0, "label": "East Exit"},
+    {"id": "exit-west", "kind": "EXIT", "x": 50, "y": 100, "label": "West Exit"},
+
+    {"id": "hub-center", "kind": "CORRIDOR", "x": 50, "y": 50, "label": "Central Hub"},
+    {"id": "corridor-n1", "kind": "CORRIDOR", "x": 25, "y": 50},
+    {"id": "corridor-n2", "kind": "CORRIDOR", "x": 75, "y": 50},
+    {"id": "corridor-e1", "kind": "CORRIDOR", "x": 50, "y": 25},
+    {"id": "corridor-e2", "kind": "CORRIDOR", "x": 50, "y": 75},
+
+    {"id": "door-R1", "kind": "DOOR", "x": 10, "y": 40, "label": "Server Room A Door"},
+    {"id": "door-R2", "kind": "DOOR", "x": 10, "y": 60, "label": "Office 2 Door"},
+    {"id": "door-R3", "kind": "DOOR", "x": 90, "y": 40, "label": "Storage 3 Door"},
+    {"id": "door-R4", "kind": "DOOR", "x": 90, "y": 60, "label": "Lab 4 Door"},
+    {"id": "door-R5", "kind": "DOOR", "x": 40, "y": 10, "label": "Conference Room Door"},
+    {"id": "door-R6", "kind": "DOOR", "x": 60, "y": 10, "label": "Server Room B Door"},
+    {"id": "door-R7", "kind": "DOOR", "x": 40, "y": 90, "label": "Chemical Storage Door"},
+    {"id": "door-R8", "kind": "DOOR", "x": 60, "y": 90, "label": "Warehouse Door"},
+    {"id": "door-R9", "kind": "DOOR", "x": 25, "y": 35, "label": "Electrical Room Door"},
+    {"id": "door-R10", "kind": "DOOR", "x": 75, "y": 35, "label": "Mechanical Room Door"}
+  ],
+  "edges": [
+    {"id": "e1", "from": "exit-north", "to": "corridor-n1", "baseTime": 20},
+    {"id": "e2", "from": "corridor-n1", "to": "hub-center", "baseTime": 20},
+    {"id": "e3", "from": "hub-center", "to": "corridor-n2", "baseTime": 20},
+    {"id": "e4", "from": "corridor-n2", "to": "exit-south", "baseTime": 20},
+    {"id": "e5", "from": "exit-east", "to": "corridor-e1", "baseTime": 20},
+    {"id": "e6", "from": "corridor-e1", "to": "hub-center", "baseTime": 20},
+    {"id": "e7", "from": "hub-center", "to": "corridor-e2", "baseTime": 20},
+    {"id": "e8", "from": "corridor-e2", "to": "exit-west", "baseTime": 20},
+
+    {"id": "e9", "from": "corridor-n1", "to": "door-R1", "baseTime": 10, "firstUseClearTime": 15},
+    {"id": "e10", "from": "corridor-n1", "to": "door-R2", "baseTime": 10},
+    {"id": "e11", "from": "corridor-n2", "to": "door-R3", "baseTime": 10},
+    {"id": "e12", "from": "corridor-n2", "to": "door-R4", "baseTime": 10, "firstUseClearTime": 20},
+    {"id": "e13", "from": "corridor-e1", "to": "door-R5", "baseTime": 10},
+    {"id": "e14", "from": "corridor-e1", "to": "door-R6", "baseTime": 10, "firstUseClearTime": 15},
+    {"id": "e15", "from": "corridor-e2", "to": "door-R7", "baseTime": 10, "firstUseClearTime": 25},
+    {"id": "e16", "from": "corridor-e2", "to": "door-R8", "baseTime": 10},
+    {"id": "e17", "from": "corridor-n1", "to": "door-R9", "baseTime": 8},
+    {"id": "e18", "from": "corridor-n2", "to": "door-R10", "baseTime": 8}
+  ],
+  "rooms": [
+    {"id": "R1", "doorNode": "door-R1", "verifyTime": 60, "redundancy": true, "label": "Server Room A (Critical)"},
+    {"id": "R2", "doorNode": "door-R2", "verifyTime": 35, "label": "Office 2"},
+    {"id": "R3", "doorNode": "door-R3", "verifyTime": 40, "label": "Storage 3"},
+    {"id": "R4", "doorNode": "door-R4", "verifyTime": 50, "label": "Laboratory 4"},
+    {"id": "R5", "doorNode": "door-R5", "verifyTime": 30, "label": "Conference Room"},
+    {"id": "R6", "doorNode": "door-R6", "verifyTime": 60, "redundancy": true, "label": "Server Room B (Critical)"},
+    {"id": "R7", "doorNode": "door-R7", "verifyTime": 55, "redundancy": true, "label": "Chemical Storage (Critical)"},
+    {"id": "R8", "doorNode": "door-R8", "verifyTime": 45, "label": "Warehouse"},
+    {"id": "R9", "doorNode": "door-R9", "verifyTime": 40, "label": "Electrical Room"},
+    {"id": "R10", "doorNode": "door-R10", "verifyTime": 40, "label": "Mechanical Room"}
+  ],
+  "entrances": ["exit-north", "exit-south", "exit-east", "exit-west"],
+  "exits": ["exit-north", "exit-south", "exit-east", "exit-west"],
+  "metadata": {
+    "name": "Large Multi-Wing Facility",
+    "description": "Complex 10-room facility with 4 exits, 3 critical rooms requiring redundancy, and clearance obstacles. Designed for testing with 4-6 firefighters to demonstrate load balancing and parallel operations."
+  }
+}
