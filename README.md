@@ -127,6 +127,9 @@ def main():
     algorithm.print_results(person1, person2)
 ```
 
+## WARNING
+ignore multi folder for now
+
 ## 未来改进
 
 可以考虑的改进方向：
