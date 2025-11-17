@@ -257,7 +257,7 @@ class ComplexBuildingInspection:
         # 调整布局以显示完整图例
         plt.subplots_adjust(right=0.75)
         plt.savefig('./output/complex_single_level_building_inspection.png', 
-                   dpi=300, bbox_inches='tight', facecolor='white')
+                   dpi=300, bbox_inches='tight')
         plt.show()
     
     def print_results(self, person1, person2):
