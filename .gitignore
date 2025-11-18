@@ -34,6 +34,9 @@ ENV/
 .claude/
 .specify/
 
+# Project-specific local files
+CLAUDE.md
+
 # OS
 .DS_Store
 Thumbs.db
