@@ -31,6 +31,8 @@ ENV/
 .idea/
 *.swp
 *.swo
+.claude/
+.specify/
 
 # OS
 .DS_Store
@@ -48,3 +50,6 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+# Output folder
+output/
