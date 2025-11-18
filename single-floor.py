@@ -139,8 +139,9 @@ class SingleFloorBuildingInspection:
         # 底部房间
         rooms.extend([
             # Backstage Equipment Room有两个门：底部(11.5,0)和顶部(11.5,3)
-            Room("Backstage Equipment Room", 0, 0, 23, 3, 11.5, 0, 270, 1.8,
-                 additional_doors=[(11.5, 3, 90), (11.5, 0, 90)]),
+            # 主门设为顶部门(11.5,3)，因为底部门有严格的拓扑约束
+            Room("Backstage Equipment Room", 0, 0, 23, 3, 11.5, 3, 90, 1.8,
+                 additional_doors=[(11.5, 0, 270)]),
             Room("Multipurpose Classroom", 25, 0, 8, 10, 29, 10, 90, 1.5),
             Room("Office", 33, 0, 8, 10, 37, 10, 90, 1.0),
         ])
@@ -158,18 +159,229 @@ class SingleFloorBuildingInspection:
     def _create_exits(self) -> dict:
         """创建出入口"""
         return {
-            "exit1": (0.5, 10.5),  # Hall左侧门
-            "exit2": (35.5, 19),   # 上走廊右端
+            "exit1": (0, 10.5),    # Hall左侧门（与Hall左门位置相同，因为这是唯一的外部出口）
+            "exit2": (34.5, 19),   # 上走廊右端（修正为在Upper Corridor内：x < 35）
         }
 
     def _create_waypoints(self) -> List[Tuple[float, float]]:
-        """创建关键路径节点（自动从房间门生成）"""
+        """创建关键路径节点（自动从房间门生成，并添加走廊关键点）"""
         waypoints = []
         for room in self.rooms:
             if "Corridor" not in room.name:
                 # 添加房间的所有门作为路径节点
                 waypoints.extend(room.all_door_positions)
+
+        # 添加走廊关键点以支持走廊内的路径规划
+        # Upper Corridor关键点 (y=18到y=20, x=0到x=35)
+        waypoints.extend([
+            (5, 19), (10, 19), (15, 19), (20, 19), (25, 19), (30, 19), (34, 19),  # Upper Corridor中的关键点
+        ])
+        # Vertical Corridor关键点 (x=23到x=25, y=0到y=20)
+        waypoints.extend([
+            (24, 3), (24, 7), (24, 11), (24, 15), (24, 18),  # Vertical Corridor中的关键点
+        ])
+        # Middle Corridor关键点 (x=25到x=41, y=10到y=12)
+        waypoints.extend([
+            (27, 11), (30, 11), (33, 11), (37, 11), (40, 11),  # Middle Corridor中的关键点
+        ])
+
         return waypoints
+
+    # ========================================================================
+    # 拓扑关系/约束
+    # ========================================================================
+    # Hall四个门中：
+    #     左侧(0,10.5)可以通往其余3个门；
+    #     底部(11.5,3)可以通往其余3个门并可以连接Backstage Equipment Room；
+    #     顶部(11.5,18)可以通往其余3个门，并可以通往Upper Corridor;
+    #     右侧(23,10.5)可以通往其余3个门，并可以通往Vertical Corridor；
+    # Backstage Equipment Room两个门：
+    #     底部(11.5,0)只能通往顶部(11.5,3)；
+    #     顶部(11.5,3)可以通往Hall的其余3个门；
+    #     顶部的门和Hall底部的门是同一个门；
+    # 其余房间的门只要可以通往任意一个Corridor就可以互通；因为三个Corridor是连通的；
+
+    def _can_doors_connect(self, door1: Tuple[float, float], door2: Tuple[float, float]) -> bool:
+        """
+        根据拓扑约束检查两个门是否可以直接连接
+
+        约束规则：
+        - Hall左门(0,10.5): 只能连接其他3个Hall门
+        - Hall底门(11.5,3): 可连接其他3个Hall门 + Backstage
+        - Hall顶门(11.5,18): 可连接其他3个Hall门 + Upper Corridor
+        - Hall右门(23,10.5): 可连接其他3个Hall门 + Vertical Corridor
+        - Backstage底门(11.5,0): 只能连接Backstage顶门(11.5,3)
+        - 其他房间的门: 只能通过Corridor互通
+        """
+        # 定义特殊门的位置
+        hall_left = (0, 10.5)
+        hall_bottom = (11.5, 3)
+        hall_top = (11.5, 18)
+        hall_right = (23, 10.5)
+        backstage_bottom = (11.5, 0)
+        backstage_top = (11.5, 3)  # 与hall_bottom是同一个门
+
+        tolerance = 0.5  # 位置容差
+
+        # Debug output (can be removed later)
+        debug_this = False  # (door1 == (29, 10) and door2 == (11.5, 0)) or (door2 == (29, 10) and door1 == (11.5, 0))
+        # if debug_this:
+        #     print(f"DEBUG: Checking connection {door1} -> {door2}")
+
+        def is_same_pos(pos1, pos2):
+            return abs(pos1[0] - pos2[0]) < tolerance and abs(pos1[1] - pos2[1]) < tolerance
+
+        # Hall的4个门
+        hall_doors = [hall_left, hall_bottom, hall_top, hall_right]
+
+        # 识别具体是哪个门
+        door1_is_hall_left = is_same_pos(door1, hall_left)
+        door1_is_hall_bottom = is_same_pos(door1, hall_bottom)
+        door1_is_hall_top = is_same_pos(door1, hall_top)
+        door1_is_hall_right = is_same_pos(door1, hall_right)
+        door1_is_hall = door1_is_hall_left or door1_is_hall_bottom or door1_is_hall_top or door1_is_hall_right
+
+        door2_is_hall_left = is_same_pos(door2, hall_left)
+        door2_is_hall_bottom = is_same_pos(door2, hall_bottom)
+        door2_is_hall_top = is_same_pos(door2, hall_top)
+        door2_is_hall_right = is_same_pos(door2, hall_right)
+        door2_is_hall = door2_is_hall_left or door2_is_hall_bottom or door2_is_hall_top or door2_is_hall_right
+
+        # 检查是否是Backstage的门
+        door1_is_backstage_bottom = is_same_pos(door1, backstage_bottom)
+        door2_is_backstage_bottom = is_same_pos(door2, backstage_bottom)
+        door1_is_backstage_top = is_same_pos(door1, backstage_top)
+        door2_is_backstage_top = is_same_pos(door2, backstage_top)
+
+        door1_is_backstage = door1_is_backstage_bottom or door1_is_backstage_top
+        door2_is_backstage = door2_is_backstage_bottom or door2_is_backstage_top
+
+        # 检查是否在走廊内
+        door1_in_corridor = self._point_in_corridor(door1[0], door1[1])
+        door2_in_corridor = self._point_in_corridor(door2[0], door2[1])
+
+        # if debug_this:
+        #     print(f"  door1_is_backstage={door1_is_backstage}, door1_is_hall={door1_is_hall}")
+        #     print(f"  door2_is_backstage={door2_is_backstage}, door2_is_hall={door2_is_hall}")
+        #     print(f"  door2_is_backstage_bottom={door2_is_backstage_bottom}")
+
+        # ===== CRITICAL CONSTRAINT: Backstage底部门隔离规则 =====
+        # 规则1: Backstage底部门(11.5,0)只能连接到Backstage顶部门(11.5,3)，不能连接任何其他位置
+        # 这是最严格的约束，必须首先检查
+        if door1_is_backstage_bottom:
+            # door1是Backstage底部门，只能连接到Backstage顶部门
+            result = door2_is_backstage_top or door2_is_hall_bottom  # backstage_top和hall_bottom是同一个门
+            # if debug_this:
+            #     print(f"  CRITICAL Rule 1a: door1 is backstage bottom, can only connect to backstage top, returning {result}")
+            return result
+        if door2_is_backstage_bottom:
+            # door2是Backstage底部门，只能连接到Backstage顶部门
+            result = door1_is_backstage_top or door1_is_hall_bottom  # backstage_top和hall_bottom是同一个门
+            # if debug_this:
+            #     print(f"  CRITICAL Rule 1b: door2 is backstage bottom, can only connect to backstage top, returning {result}")
+            return result
+
+        # ===== 其他约束规则（更严格的Hall门约束） =====
+        # 规则2: Hall的4个门之间可以互相连接
+        if door1_is_hall and door2_is_hall:
+            return True
+
+        # 规则3: Hall左门的约束理解
+        # Hall左门是外部出口，从Hall内部可以到达其他3个Hall门
+        # 但从外部（exit1）进入后，需要先进入Hall，然后可以到达其他3个Hall门
+        # 关键：Hall的4个门之间已经在规则2中处理（互相可达）
+        # 这里只需要限制Hall左门不能直接到达非Hall的其他房间门
+        if door1_is_hall_left:
+            # door1是Hall左门，可以连接其他3个Hall门，但不能直接到达其他房间
+            if door2_is_hall:
+                return True
+            # 不能直接连接到走廊或其他房间（必须通过Hall的其他门）
+            return False
+        if door2_is_hall_left:
+            # door2是Hall左门，可以连接其他3个Hall门，但不能直接到达其他房间
+            if door1_is_hall:
+                return True
+            # 不能直接连接到走廊或其他房间（必须通过Hall的其他门）
+            return False
+
+        # 规则4: Hall底门的约束
+        # Hall底门可以连接其他3个Hall门 + Backstage门（因为它们是同一个门）
+        if door1_is_hall_bottom:
+            # door1是Hall底门，可以连接其他3个Hall门或Backstage门
+            if door2_is_hall or door2_is_backstage:
+                return True
+            # 不能直接连接到走廊或其他房间（必须通过Hall的其他门或Backstage）
+            return False
+        if door2_is_hall_bottom:
+            # door2是Hall底门，可以连接其他3个Hall门或Backstage门
+            if door1_is_hall or door1_is_backstage:
+                return True
+            # 不能直接连接到走廊或其他房间（必须通过Hall的其他门或Backstage）
+            return False
+
+        # 规则5: Hall顶门的约束 - 可以连接其他3个Hall门 + Upper Corridor
+        if door1_is_hall_top:
+            # door1是Hall顶门，可以连接其他3个Hall门或Upper Corridor内的点
+            if door2_is_hall:
+                return True
+            # 检查door2是否在Upper Corridor内
+            if self._point_in_corridor(door2[0], door2[1]):
+                # 进一步检查是否在Upper Corridor内（y=18-20, x=0-35）
+                if 0 <= door2[0] <= 35 and 18 <= door2[1] <= 20:
+                    return True
+            return False
+        if door2_is_hall_top:
+            # door2是Hall顶门，可以连接其他3个Hall门或Upper Corridor内的点
+            if door1_is_hall:
+                return True
+            # 检查door1是否在Upper Corridor内
+            if self._point_in_corridor(door1[0], door1[1]):
+                # 进一步检查是否在Upper Corridor内（y=18-20, x=0-35）
+                if 0 <= door1[0] <= 35 and 18 <= door1[1] <= 20:
+                    return True
+            return False
+
+        # 规则6: Hall右门的约束 - 可以连接其他3个Hall门 + Vertical Corridor
+        if door1_is_hall_right:
+            # door1是Hall右门，可以连接其他3个Hall门或Vertical Corridor内的点
+            if door2_is_hall:
+                return True
+            # 检查door2是否在Vertical Corridor内（x=23-25, y=0-20）
+            if self._point_in_corridor(door2[0], door2[1]):
+                if 23 <= door2[0] <= 25 and 0 <= door2[1] <= 20:
+                    return True
+            return False
+        if door2_is_hall_right:
+            # door2是Hall右门，可以连接其他3个Hall门或Vertical Corridor内的点
+            if door1_is_hall:
+                return True
+            # 检查door1是否在Vertical Corridor内（x=23-25, y=0-20）
+            if self._point_in_corridor(door1[0], door1[1]):
+                if 23 <= door1[0] <= 25 and 0 <= door1[1] <= 20:
+                    return True
+            return False
+
+        # 规则7: 如果涉及Backstage顶门，只能连接Hall底门（因为它们是同一个门）或Hall的其他门
+        if door1_is_backstage_top:
+            # Backstage顶门可以连接到Hall的任意门（因为它就是Hall底门，可以通往其他3个Hall门）
+            return door2_is_hall
+        if door2_is_backstage_top:
+            # Backstage顶门可以连接到Hall的任意门
+            return door1_is_hall
+
+        # 规则8: 其他情况 - 非特殊门之间只能通过走廊连接
+        # 如果两个点都在走廊内，允许连接（物理墙体检查会在can_move_directly中进行）
+        if door1_in_corridor and door2_in_corridor:
+            return True
+
+        # 如果一个点在走廊内，另一个点是普通房间门（非Hall/Backstage），允许连接
+        if door1_in_corridor and not door2_is_hall and not door2_is_backstage:
+            return True
+        if door2_in_corridor and not door1_is_hall and not door1_is_backstage:
+            return True
+
+        # 其他所有情况都不允许直接连接
+        return False
 
     # ========================================================================
     # 工具方法
@@ -324,9 +536,16 @@ class SingleFloorBuildingInspection:
         nodes = list(set(nodes))
 
         def can_move_directly(p1: Tuple[float, float], p2: Tuple[float, float]) -> bool:
-            """检查两点间是否可以直接移动（严格检查，不允许穿墙）"""
+            """检查两点间是否可以直接移动（严格检查，不允许穿墙，遵循拓扑约束）"""
             x1, y1 = p1
             x2, y2 = p2
+
+            # 首先检查拓扑约束（门之间的连接规则）
+            can_connect = self._can_doors_connect(p1, p2)
+            # if (p1 == (29, 10) and p2 == (11.5, 0)) or (p2 == (29, 10) and p1 == (11.5, 0)):
+            #     print(f"DEBUG can_move_directly: {p1} -> {p2}, can_doors_connect={can_connect}")
+            if not can_connect:
+                return False
 
             # 检查两个点是否都在走廊内
             p1_in_corridor = self._point_in_corridor(x1, y1)
@@ -413,6 +632,12 @@ class SingleFloorBuildingInspection:
                     path.append(node)
                     node = prev[node]
                 path.reverse()
+                # Debug: check if path contains the problematic sequence
+                # for i in range(len(path) - 1):
+                #     if (path[i] == (29, 10) and path[i+1] == (11.5, 0)) or \
+                #        (path[i] == (11.5, 0) and path[i+1] == (29, 10)):
+                #         print(f"DEBUG: Found path segment {path[i]} -> {path[i+1]} in path from {start} to {end}")
+                #         print(f"  Full path: {path}")
                 return current_dist, path
 
             if current_dist > distances[current]:
@@ -431,8 +656,9 @@ class SingleFloorBuildingInspection:
                         prev[next_node] = current
                         heapq.heappush(pq, (new_dist, next_node))
 
-        # 如果找不到路径，返回直线路径
-        return self.distance(start[0], start[1], end[0], end[1]), [start, end]
+        # 如果找不到路径，返回无穷大距离和空路径（而不是违反约束的直线路径）
+        # 这将使得无法到达的房间在分配算法中被排除
+        return float('inf'), [start, end]
 
     # ========================================================================
     # 任务分配算法
@@ -486,15 +712,29 @@ class SingleFloorBuildingInspection:
                 move_time2 = dist2 / self.MOVE_SPEED
                 total_time2 = person2.total_time + move_time2 + sweep_time
 
+                # Debug: check if this is the problematic assignment
+                # if room.name == "Backstage Equipment Room":
+                #     if person2.get_current_position() == (29, 10):
+                #         print(f"DEBUG: Assigning Backstage to Person 2 from {person2.get_current_position()}")
+                #         print(f"  Backstage door: {door}")
+                #         print(f"  Path: {path2}")
+
+                # 跳过无法到达的房间（距离为无穷大）
+                if dist1 == float('inf') and dist2 == float('inf'):
+                    print(f"警告：房间 {room.name} 无法从任何人员位置到达，跳过分配")
+                    continue
+
                 # 计算分配后的时间差
                 time_diff1 = abs(total_time1 - person2.total_time)
                 time_diff2 = abs(total_time2 - person1.total_time)
 
-                # 优先选择时间差更小的分配
-                if time_diff1 <= time_diff2:
+                # 优先选择时间差更小且距离不是无穷大的分配
+                if dist1 != float('inf') and (dist2 == float('inf') or time_diff1 <= time_diff2):
                     self._assign_room_to_person(person1, room, dist1, sweep_time, path1)
-                else:
+                elif dist2 != float('inf'):
                     self._assign_room_to_person(person2, room, dist2, sweep_time, path2)
+                else:
+                    print(f"警告：房间 {room.name} 无法到达，跳过分配")
 
             except Exception as e:
                 print(f"警告：计算房间 {room.name} 的距离失败: {e}")
@@ -573,12 +813,14 @@ class SingleFloorBuildingInspection:
         print(f"  移动距离: {person1.total_distance:.1f}m")
         print(f"  总时间: {person1.total_time:.0f}秒 ({person1.total_time/60:.1f}分钟)")
         print(f"  路径点数: {len(person1.path)}")
+        # print(f"  路径坐标: {person1.path}")
 
         print(f"\n【人员2】")
         print(f"  路径: {' → '.join(person2.rooms)} → 出口")
         print(f"  移动距离: {person2.total_distance:.1f}m")
         print(f"  总时间: {person2.total_time:.0f}秒 ({person2.total_time/60:.1f}分钟)")
         print(f"  路径点数: {len(person2.path)}")
+        # print(f"  路径坐标: {person2.path}")
 
         print(f"\n【汇总】")
         print(f"  总移动距离: {person1.total_distance + person2.total_distance:.1f}m")
@@ -728,7 +970,7 @@ class SingleFloorBuildingInspection:
                        bbox=dict(boxstyle="round,pad=0.3", facecolor='white',
                                edgecolor=dark_color, alpha=0.8))
 
-            # 在路径关键点添加数字标注
+            # 在路径关键点添加数字标注（只标注实际访问的房间门，避免重复标注）
             label_num = 1
             room_doors = []
             for room in self.rooms:
@@ -736,21 +978,28 @@ class SingleFloorBuildingInspection:
                     # 使用房间的所有门位置
                     room_doors.extend(room.all_door_positions)
 
+            # 跟踪已标注的房间门，避免重复标注
+            labeled_doors = set()
+
             for i in range(1, len(person.path) - 1):
                 x, y = path[i]
                 is_door = False
+                matched_door = None
                 for door_x, door_y in room_doors:
                     if abs(x - door_x) < 0.3 and abs(y - door_y) < 0.3:
                         is_door = True
+                        matched_door = (door_x, door_y)
                         break
 
-                if is_door or i % max(1, len(person.path) // 15) == 0:
+                # 只标注房间门，且每个门只标注一次（第一次访问时）
+                if is_door and matched_door not in labeled_doors:
                     ax.annotate(str(label_num), (x, y),
                               xytext=(0, 0), textcoords='offset points',
                               fontsize=11, color=dark_color, weight='bold',
                               bbox=dict(boxstyle="circle,pad=0.4", facecolor='white',
                                       edgecolor=dark_color, linewidth=2, alpha=0.95),
                               ha='center', va='center', zorder=12)
+                    labeled_doors.add(matched_door)
                     label_num += 1
 
             # 标记终点（END）
