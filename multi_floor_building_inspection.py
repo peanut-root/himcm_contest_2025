@@ -43,7 +43,7 @@ def distance(x1, y1, x2, y2):
 class Room:
     """Represents an inspectable space within the building."""
     name: str
-    floor: str  # "F1", "F3", "F4"
+    floor: str  # "F1", "F2", "F3", "F4"
     x: float  # Top-left x position in meters
     y: float  # Top-left y position in meters
     width: float
@@ -74,7 +74,7 @@ class Room:
 @dataclass
 class Floor:
     """Represents a single level of the building."""
-    name: str  # "F1", "F3", "F4"
+    name: str  # "F1", "F2", "F3", "F4"
     rooms: List[Room]
     corridors: List[Tuple[float, float]]
     exits: List[Tuple[float, float]]
@@ -94,7 +94,7 @@ class Floor:
 class Stairwell:
     """Represents vertical connection between floors."""
     name: str
-    connected_floors: List[str]  # ["F1", "F3", "F4"]
+    connected_floors: List[str]  # ["F1", "F2", "F3", "F4"]
     position_per_floor: Dict[str, Tuple[float, float]]
     floor_height: float = 3.0  # Vertical distance per floor (meters)
 
@@ -149,7 +149,7 @@ class MultiFloorBuildingInspection:
     """Main simulation class for multi-floor building inspection."""
 
     def __init__(self):
-        """Initialize 3-floor building with rooms from F1, F3, F4 PDFs."""
+        """Initialize 4-floor building with rooms from F1, F2, F3, F4 floor plans."""
         # T010: Transcribe F1 rooms from F1.pdf (CORRECTED from actual PDF layout)
         # Floor 1 dimensions: 20000mm x 18000mm = 20m x 18m
         # Converting mm to meters by dividing by 1000
@@ -179,7 +179,21 @@ class MultiFloorBuildingInspection:
             Room("Public Exhibition Hall", "F2", 5, 0, 10, 4, 10, 4, 90, 1.5),  # Bottom-middle: y=0-4m, width=10m, door on top
         ]
 
-        # T012: Transcribe F4 rooms from F4.pdf (CORRECTED from actual PDF layout)
+        # T012: Transcribe F3 rooms from F3.pdf (CORRECTED from actual PDF layout)
+        # Floor 3 dimensions: 20000mm x 18000mm = 20m x 18m (same as F1)
+        # Coordinate system: origin at bottom-left
+        # Vertical sections: 4m (bottom) + 2m (corridor) + 7m (middle) + 2m (corridor) + 3m (top) = 18m total
+        f3_rooms = [
+            Room("Multi-media", "F3", 0, 15, 4, 3, 2, 15, 270, 1.8),  # Top row: y=15-18m (3m tall), door at bottom
+            Room("Specialty Museum", "F3", 4, 15, 12, 3, 10, 15, 270, 1.5),  # Top row: y=15-18m (3m tall), door at bottom
+            Room("Erotic reading materials", "F3", 16, 15, 4, 3, 18, 15, 270, 1.8),  # Top row: y=15-18m (3m tall), door at bottom
+            Room("Children's Exhibition Room", "F3", 0, 6, 15, 7, 7.5, 6, 270, 1.5, [(7.5, 13, 90)]),  # Middle: y=6-13m (7m tall), width=15m, door at BOTTOM, second door at TOP
+            Room("parent-child interaction", "F3", 17, 0, 3, 13, 17, 6.5, 180, 1.5),  # Right side: y=0-13m (13m tall), width=3m, 2m hallway at x=15-17m
+            Room("Stairwell", "F3", 0, 0, 5, 4, 2.5, 4, 90, 1.0),  # Bottom row: y=0-4m, door on top
+            Room("Toilet", "F3", 5, 0, 5, 4, 7.5, 4, 90, 1.0),  # Bottom row: y=0-4m, door on top
+        ]
+
+        # T013: Transcribe F4 rooms from F4.pdf (CORRECTED from actual PDF layout)
         # Floor 4 dimensions: 20000mm x 18000mm = 20m x 18m (same as F1 and F3)
         # Coordinate system: origin at bottom-left
         # Vertical sections: 4m (bottom) + 2m (corridor) + 7m (middle) + 2m (corridor) + 3m (top) = 18m total
@@ -193,23 +207,25 @@ class MultiFloorBuildingInspection:
             Room("Toilet", "F4", 5, 0, 5, 4, 7.5, 4, 90, 1.0),  # Bottom row: y=0-4m, door on top
         ]
 
-        # T013: Create 3 Floor instances (UPDATED: F1, F2, F4)
+        # T014: Create 4 Floor instances (UPDATED: F1, F2, F3, F4)
         self.floors = [
             Floor("F1", f1_rooms, [(5, 9), (9, 9), (5, 5), (9, 5)], [(1, 4)], 0.0),  # Ground floor, exit at Entrance
-            Floor("F2", f2_rooms, [(8.5, 5), (8.5, 14), (5, 2)], [(2.5, 2)], 3.0),  # 3m above F1, corridors at y=5 and y=14
-            Floor("F4", f4_rooms, [(8.5, 5), (8.5, 14), (5, 2)], [(2.5, 2)], 6.0),  # 6m above F1, corridors at y=5 and y=14
+            Floor("F2", f2_rooms, [(8.5, 5), (8.5, 14), (5, 2)], [(2.5, 2)], 3.0),  # 3m above F1
+            Floor("F3", f3_rooms, [(8.5, 5), (8.5, 14), (5, 2)], [(2.5, 2)], 6.0),  # 6m above F1
+            Floor("F4", f4_rooms, [(8.5, 5), (8.5, 14), (5, 2)], [(2.5, 2)], 9.0),  # 9m above F1
         ]
 
         # Collect all rooms
-        self.rooms = f1_rooms + f2_rooms + f4_rooms
+        self.rooms = f1_rooms + f2_rooms + f3_rooms + f4_rooms
 
-        # T014: Create Stairwell connecting F1↔F2↔F4 (UPDATED)
+        # T015: Create Stairwell connecting F1↔F2↔F3↔F4 (4 floors)
         self.stairwell = Stairwell(
             "Main Stairwell",
-            ["F1", "F2", "F4"],
+            ["F1", "F2", "F3", "F4"],
             {
                 "F1": (2.5, 2),   # Stairwell door position on F1 (center of stairwell)
                 "F2": (2.5, 2),   # Stairwell door position on F2 (vertically aligned)
+                "F3": (2.5, 2),   # Stairwell door position on F3 (vertically aligned)
                 "F4": (2.5, 2),   # Stairwell door position on F4 (vertically aligned)
             },
             3.0  # 3 meters per floor
@@ -266,6 +282,26 @@ class MultiFloorBuildingInspection:
             ((15, 7), (15, 11)),    # Computer Room door access
         ]
         self.hallway_graphs["F2"] = self._build_graph_from_segments(f2_hallways)
+
+        # F3 Hallway Network - similar structure to F4
+        f3_hallways = [
+            # Bottom horizontal corridor (y=4-5)
+            ((2.5, 4), (5, 4)),   # Stairwell to Toilet
+            ((5, 4), (7.5, 4)),   # Toilet to main corridor
+            ((7.5, 4), (10, 4)),  # Corridor extends
+            # Lower vertical access
+            ((7.5, 4), (7.5, 6)),  # To Children's Exhibition bottom door
+            ((10, 4), (10, 6)),    # Vertical segment
+            # Upper horizontal corridor (y=13-14)
+            ((7.5, 13), (7.5, 15)), # Children's Exhibition top door to upper corridor
+            ((2, 15), (7.5, 15)),   # Multi-media door area
+            ((7.5, 15), (10, 15)),  # Specialty Museum door
+            ((10, 15), (18, 15)),   # To Erotic reading materials door
+            # Side corridor (x=17) for parent-child interaction
+            ((17, 2), (17, 6.5)),   # Access to parent-child room
+            ((17, 6.5), (17, 13)),  # Continues along side
+        ]
+        self.hallway_graphs["F3"] = self._build_graph_from_segments(f3_hallways)
 
         # F4 Hallway Network - same structure as F3
         f4_hallways = [
@@ -671,12 +707,12 @@ class MultiFloorBuildingInspection:
 
     # T021, T025, T028: Main visualize method
     def visualize(self, person1, person2):
-        """Generate 3-floor visualization with personnel paths."""
+        """Generate 4-floor visualization with personnel paths."""
         import matplotlib.pyplot as plt
         import os
 
-        # T021: Create figure with 3-floor vertical stacking
-        fig, axes = plt.subplots(3, 1, figsize=(18, 24))
+        # T021: Create figure with 4-floor vertical stacking
+        fig, axes = plt.subplots(4, 1, figsize=(18, 32))
         fig.suptitle('Multi-Floor Building Inspection Simulation', fontsize=16, fontweight='bold')
 
         # Draw each floor
