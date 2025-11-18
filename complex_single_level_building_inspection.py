@@ -602,7 +602,7 @@ class ComplexBuildingInspection:
                     # 计算person1的代价
                     dist1, path1 = self.get_path_distance(person1.get_current_position(), door)
                     move_time1 = dist1 / self.MOVE_SPEED
-                sweep_time1 = self.get_sweep_time(room)
+                    sweep_time1 = self.get_sweep_time(room)
 
 
                     total_time1 = person1.total_time + move_time1 + sweep_time1
@@ -610,7 +610,7 @@ class ComplexBuildingInspection:
                     # 计算person2的代价
                     dist2, path2 = self.get_path_distance(person2.get_current_position(), door)
                     move_time2 = dist2 / self.MOVE_SPEED
-                sweep_time2 = self.get_sweep_time(room)
+                    sweep_time2 = self.get_sweep_time(room)
                     total_time2 = person2.total_time + move_time2 + sweep_time2
                 
                     # 平衡策略：选择使得两个人完成时间更接近的分配
@@ -640,10 +640,10 @@ class ComplexBuildingInspection:
                             if cost < best_cost:
                                 best_cost = cost
                                 best_assignment = (1, idx, dist1, sweep_time1, path1)
-                else:
+                        else:
                             cost = max_time2 + 0.1 * time_diff2
-                if cost < best_cost:
-                    best_cost = cost
+                            if cost < best_cost:
+                                best_cost = cost
                                 best_assignment = (2, idx, dist2, sweep_time2, path2)
                             
                 except Exception as e:
@@ -711,7 +711,7 @@ class ComplexBuildingInspection:
             if len(exit_path) > 1:
                 person.path.extend(exit_path[1:])
             else:
-            person.path.append(nearest_exit)
+                person.path.append(nearest_exit)
             
             # 更新距离和时间
             move_time = exit_dist / self.MOVE_SPEED
@@ -779,8 +779,8 @@ class ComplexBuildingInspection:
             cx, cy = room.x + room.width/2, room.y + room.height/2
             if "Corridor" not in room.name:
                 # 只对非走廊房间显示清扫时间
-            sample_sweep_time = self.get_sweep_time(room)
-            room_label = f"{room.name}\n({sample_sweep_time:.0f}s)"
+                sample_sweep_time = self.get_sweep_time(room)
+                room_label = f"{room.name}\n({sample_sweep_time:.0f}s)"
             else:
                 # 走廊只显示名称
                 room_label = room.name
