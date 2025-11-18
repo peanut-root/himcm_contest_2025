@@ -949,19 +949,19 @@ class MultiFloorBuildingInspection:
     # T024: _draw_paths_on_floor helper
     def _draw_paths_on_floor(self, ax, floor, person, color, person_id):
         """Trace personnel path on a specific floor as strict waypoint-to-waypoint segments."""
-        # Filter waypoints for this floor
-        floor_waypoints = [(wp[0], wp[1]) for wp in person.path if wp[2] == floor.name]
+        # Filter waypoints for this floor with their global indices
+        floor_waypoints_with_indices = [(i, wp[0], wp[1]) for i, wp in enumerate(person.path) if wp[2] == floor.name]
 
-        if not floor_waypoints:
+        if not floor_waypoints_with_indices:
             return
 
         # Draw path segments ONLY between consecutive waypoints (strict constraint)
-        for i in range(len(floor_waypoints) - 1):
-            x1, y1 = floor_waypoints[i]
-            x2, y2 = floor_waypoints[i + 1]
+        for i in range(len(floor_waypoints_with_indices) - 1):
+            idx1, x1, y1 = floor_waypoints_with_indices[i]
+            idx2, x2, y2 = floor_waypoints_with_indices[i + 1]
 
             # Draw direct line between waypoints (no intermediate interpolation)
-            ax.plot([x1, x2], [y1, y2], color=color, linewidth=2.5, alpha=0.8, linestyle='-')
+            ax.plot([x1, x2], [y1, y2], color=color, linewidth=2.5, alpha=0.8, linestyle='-', zorder=5)
 
             # Add arrow to show direction
             dx, dy = x2 - x1, y2 - y1
@@ -969,28 +969,39 @@ class MultiFloorBuildingInspection:
             if dist > 0.5:  # Only add arrow if segment is long enough
                 mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
                 ax.annotate('', xy=(x2, y2), xytext=(mid_x, mid_y),
-                          arrowprops=dict(arrowstyle='->', color=color, lw=2, alpha=0.7))
+                          arrowprops=dict(arrowstyle='->', color=color, lw=2, alpha=0.7), zorder=6)
 
-        # Mark waypoints with small dots
-        for i, (x, y) in enumerate(floor_waypoints):
-            ax.plot(x, y, 'o', color=color, markersize=4, alpha=0.6, markeredgecolor='white', markeredgewidth=0.5)
+        # Mark waypoints with order numbers
+        for i, (global_idx, x, y) in enumerate(floor_waypoints_with_indices):
+            # Draw small dot at waypoint
+            ax.plot(x, y, 'o', color=color, markersize=6, alpha=0.8,
+                   markeredgecolor='white', markeredgewidth=1, zorder=8)
+
+            # Add order number (global index + 1 for 1-based numbering)
+            order_num = global_idx + 1
+            ax.text(x, y, str(order_num), fontsize=7, color='white',
+                   fontweight='bold', ha='center', va='center', zorder=9,
+                   bbox=dict(boxstyle='circle,pad=0.25', facecolor=color,
+                           edgecolor='white', linewidth=1, alpha=0.9))
 
         # T027: Add START marker at first waypoint
-        if floor_waypoints:
-            start_x, start_y = floor_waypoints[0]
-            ax.plot(start_x, start_y, marker='o', color=color, markersize=12,
-                   markeredgecolor='black', markeredgewidth=2, zorder=10)
-            ax.text(start_x, start_y - 0.8, f'START {person_id}', fontsize=9,
+        if floor_waypoints_with_indices:
+            start_idx, start_x, start_y = floor_waypoints_with_indices[0]
+            ax.plot(start_x, start_y, marker='o', color=color, markersize=14,
+                   markeredgecolor='black', markeredgewidth=2.5, zorder=10)
+            ax.text(start_x, start_y - 1.0, f'START {person_id}', fontsize=10,
                    color=color, fontweight='bold', ha='center',
-                   bbox=dict(boxstyle='round', facecolor='white', alpha=0.9), zorder=10)
+                   bbox=dict(boxstyle='round,pad=0.4', facecolor='white',
+                           edgecolor=color, linewidth=2, alpha=0.95), zorder=11)
 
             # T027: Add END marker at last waypoint
-            end_x, end_y = floor_waypoints[-1]
-            ax.plot(end_x, end_y, marker='s', color=color, markersize=12,
-                   markeredgecolor='black', markeredgewidth=2, zorder=10)
-            ax.text(end_x, end_y - 0.8, f'END {person_id}', fontsize=9,
+            end_idx, end_x, end_y = floor_waypoints_with_indices[-1]
+            ax.plot(end_x, end_y, marker='s', color=color, markersize=14,
+                   markeredgecolor='black', markeredgewidth=2.5, zorder=10)
+            ax.text(end_x, end_y - 1.0, f'END {person_id}', fontsize=10,
                    color=color, fontweight='bold', ha='center',
-                   bbox=dict(boxstyle='round', facecolor='white', alpha=0.9), zorder=10)
+                   bbox=dict(boxstyle='round,pad=0.4', facecolor='white',
+                           edgecolor=color, linewidth=2, alpha=0.95), zorder=11)
 
     # T021, T025, T028: Main visualize method
     def visualize(self, person1, person2):
