@@ -169,13 +169,13 @@ class MultiFloorBuildingInspection:
         # Coordinate system: origin at bottom-left
         # Horizontal sections: 4m + 8m + 8m = 20m width (Toilet | Reading Room | Reference at top)
         # Bottom sections: 5m + 10m + 2m + 3m = 20m (Stairwell | Exhibition | hallway | Computer/Power)
-        # Vertical: 4m (bottom) + 1m (hallway) + 2m (Power) + 6m (Computer) + 2m (hallway) + 5m (top) = 20m
+        # Vertical: 4m (bottom) + 1m (hallway) + 2m (Power) + 7m (Computer) + 1m (hallway) + 5m (top) = 20m
         f2_rooms = [
             Room("Toilet", "F2", 0, 15, 4, 5, 2, 15, 270, 1.0),  # Top row: y=15-20m (5m tall), door at bottom
             Room("Reading Room", "F2", 4, 15, 8, 5, 8, 15, 270, 1.5),  # Top row: y=15-20m (5m tall), door at bottom
             Room("Reference", "F2", 12, 15, 8, 5, 16, 15, 270, 1.5),  # Top row: y=15-20m (5m tall), door at bottom
             Room("Reading Room", "F2", 0, 7, 15, 7, 7.5, 14, 90, 1.5, [(7.5, 7, 270)]),  # Middle: y=7-14m (7m tall), width=15m, door at TOP, second door at BOTTOM
-            Room("Computer Room", "F2", 17, 7, 3, 6, 17, 11, 180, 1.8),  # Right side: x=17-20m, y=7-13m (6m tall), width=3m, door on left wall, hallway above
+            Room("Computer Room", "F2", 17, 7, 3, 7, 17, 11, 180, 1.8),  # Right side: x=17-20m, y=7-14m (7m tall), width=3m, door on left wall, top wall aligned with Reading Room
             Room("Power Supply", "F2", 17, 5, 3, 2, 17, 6, 180, 1.8),  # Right side: x=17-20m, y=5-7m (2m tall), directly below Computer Room, door on left wall
             Room("Stairwell", "F2", 0, 0, 5, 4, 2.5, 4, 90, 1.0),  # Bottom-left: y=0-4m, door on top
             Room("Public Exhibition Hall", "F2", 5, 0, 10, 4, 10, 4, 90, 1.5),  # Bottom-middle: y=0-4m, width=10m, door on top
@@ -266,23 +266,23 @@ class MultiFloorBuildingInspection:
         ]
         self.hallway_graphs["F1"] = self._build_graph_from_segments(f1_hallways)
 
-        # F2 Hallway Network - vertical hallway at x=15-17, horizontal at y=4-5, y=13-15
+        # F2 Hallway Network - vertical hallway at x=15-17, horizontal at y=4-5, y=14-15
         f2_hallways = [
             # Bottom horizontal corridor (y=4-5)
             ((2.5, 4), (5, 4)),   # Stairwell to corridor
             ((5, 4), (10, 4)),    # To Public Exhibition Hall door
             ((10, 4), (15, 4)),   # Corridor extends to vertical hallway
             ((15, 4), (15, 5)),   # Short vertical to connect to Power Supply level
-            # Vertical hallway (x=15-17, from y=5 to y=13) - 2m wide corridor
+            # Vertical hallway (x=15-17, from y=5 to y=14) - 2m wide corridor
             ((16, 5), (16, 6)),   # Power Supply door access (left wall of hallway)
             ((16, 6), (16, 7)),   # Continue up
             ((16, 7), (16, 11)),  # Computer Room door access (left wall of hallway)
-            ((16, 11), (16, 13)), # Continue to horizontal hallway at y=13-15
+            ((16, 11), (16, 14)), # Continue to horizontal hallway at y=14-15
             # Lower vertical access for Reading Room bottom door
             ((7.5, 4), (7.5, 7)), # Vertical to Reading Room bottom door
-            # Middle horizontal corridor (y=13-15) - between Computer Room top and Reference
-            ((16, 13), (18, 13)), # Hallway above Computer Room
-            ((18, 13), (18, 15)), # Corner connection to top hallway
+            # Middle horizontal corridor (y=14-15) - between Computer Room/Reading Room top and Reference
+            ((16, 14), (18, 14)), # Hallway above Computer Room (aligned with Reading Room top)
+            ((18, 14), (18, 15)), # Corner connection to top hallway
             # Upper horizontal corridor (y=15)
             ((7.5, 14), (7.5, 15)), # Reading Room top door to upper corridor
             ((2, 15), (4, 15)),     # Toilet door area
