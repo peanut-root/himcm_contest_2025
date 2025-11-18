@@ -164,17 +164,19 @@ class MultiFloorBuildingInspection:
             Room("Equipment", "F1", 16, 0, 4, 4, 18, 4, 90, 1.8),  # Bottom-right, door on top (height=4m to match hallway)
         ]
 
-        # T011: Transcribe F2 rooms from F2.png (NEW layout)
+        # T011: Transcribe F2 rooms from F2.png (CORRECTED layout)
         # Floor 2 dimensions: 20000mm x 20000mm = 20m x 20m
         # Coordinate system: origin at bottom-left
-        # Vertical sections: 4m (bottom) + 2m (corridor) + 7m (middle) + 2m (corridor) + 5m (top) = 20m total
+        # Horizontal sections: 4m + 8m + 8m = 20m width (Toilet | Reading Room | Reference at top)
+        # Bottom sections: 5m + 10m + 2m + 3m = 20m (Stairwell | Exhibition | hallway | Computer/Power)
+        # Vertical: 4m (bottom) + 1m (hallway) + 2m (Power) + 8m (Computer) + 5m (top) = 20m
         f2_rooms = [
-            Room("Toilet", "F2", 0, 15, 4, 5, 4, 15, 270, 1.0),  # Top row: y=15-20m (5m tall), door at bottom
+            Room("Toilet", "F2", 0, 15, 4, 5, 2, 15, 270, 1.0),  # Top row: y=15-20m (5m tall), door at bottom
             Room("Reading Room", "F2", 4, 15, 8, 5, 8, 15, 270, 1.5),  # Top row: y=15-20m (5m tall), door at bottom
             Room("Reference", "F2", 12, 15, 8, 5, 16, 15, 270, 1.5),  # Top row: y=15-20m (5m tall), door at bottom
             Room("Reading Room", "F2", 0, 7, 15, 7, 7.5, 14, 90, 1.5, [(7.5, 7, 270)]),  # Middle: y=7-14m (7m tall), width=15m, door at TOP, second door at BOTTOM
-            Room("Computer Room", "F2", 15, 7, 3, 8, 15, 11, 180, 1.8),  # Right side: y=7-15m (8m tall), width=3m, door on left
-            Room("Power Supply", "F2", 15, 0, 3, 2, 15, 1, 180, 1.8),  # Bottom-right: y=0-2m, width=3m, door on left
+            Room("Computer Room", "F2", 17, 7, 3, 8, 17, 11, 180, 1.8),  # Right side: x=17-20m, y=7-15m (8m tall), width=3m, door on left wall
+            Room("Power Supply", "F2", 17, 5, 3, 2, 17, 6, 180, 1.8),  # Right side: x=17-20m, y=5-7m (2m tall), directly below Computer Room, door on left wall
             Room("Stairwell", "F2", 0, 0, 5, 4, 2.5, 4, 90, 1.0),  # Bottom-left: y=0-4m, door on top
             Room("Public Exhibition Hall", "F2", 5, 0, 10, 4, 10, 4, 90, 1.5),  # Bottom-middle: y=0-4m, width=10m, door on top
         ]
@@ -264,22 +266,26 @@ class MultiFloorBuildingInspection:
         ]
         self.hallway_graphs["F1"] = self._build_graph_from_segments(f1_hallways)
 
-        # F2 Hallway Network - corridors at y=4-7, y=14-15
+        # F2 Hallway Network - vertical hallway at x=15-17, horizontal at y=4-5, y=14-15
         f2_hallways = [
-            # Bottom horizontal corridor (y=4)
+            # Bottom horizontal corridor (y=4-5)
             ((2.5, 4), (5, 4)),   # Stairwell to corridor
             ((5, 4), (10, 4)),    # To Public Exhibition Hall door
-            ((10, 4), (15, 4)),   # Corridor continues
-            # Lower vertical access (y=7)
+            ((10, 4), (15, 4)),   # Corridor extends to vertical hallway
+            ((15, 4), (15, 5)),   # Short vertical to connect to Power Supply level
+            # Vertical hallway (x=15-17, from y=5 to y=15) - 2m wide corridor
+            ((16, 5), (16, 6)),   # Power Supply door access (left wall of hallway)
+            ((16, 6), (16, 7)),   # Continue up
+            ((16, 7), (16, 11)),  # Computer Room door access (left wall of hallway)
+            ((16, 11), (16, 15)), # Continue to top
+            # Lower vertical access for Reading Room bottom door
             ((7.5, 4), (7.5, 7)), # Vertical to Reading Room bottom door
-            ((15, 4), (15, 7)),   # Vertical to Computer Room/Power Supply
             # Upper horizontal corridor (y=14-15)
             ((7.5, 14), (7.5, 15)), # Reading Room top door to upper corridor
-            ((4, 15), (7.5, 15)),   # Toilet and Reading Room door area
-            ((7.5, 15), (8, 15)),   # Continues to Reference
-            ((8, 15), (16, 15)),    # Reference door area
-            # Side corridor (x=15) for Computer Room
-            ((15, 7), (15, 11)),    # Computer Room door access
+            ((2, 15), (4, 15)),     # Toilet door area
+            ((4, 15), (8, 15)),     # Reading Room door
+            ((8, 15), (12, 15)),    # Continue
+            ((12, 15), (16, 15)),   # Reference door area, connects to vertical hallway
         ]
         self.hallway_graphs["F2"] = self._build_graph_from_segments(f2_hallways)
 
