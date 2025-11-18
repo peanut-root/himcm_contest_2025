@@ -645,7 +645,7 @@ class ComplexBuildingInspection:
                             if cost < best_cost:
                                 best_cost = cost
                                 best_assignment = (2, idx, dist2, sweep_time2, path2)
-                            
+                                        
                 except Exception as e:
                     print(f"警告：计算房间 {room.name} 的距离失败: {e}")
                     continue

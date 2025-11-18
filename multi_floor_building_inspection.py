@@ -43,7 +43,7 @@ def distance(x1, y1, x2, y2):
 class Room:
     """Represents an inspectable space within the building."""
     name: str
-    floor: str  # "F1", "F3", "F4"
+    floor: str  # "F1", "F2", "F3", "F4"
     x: float  # Top-left x position in meters
     y: float  # Top-left y position in meters
     width: float
@@ -69,12 +69,83 @@ class Room:
         """Return all doors including primary and additional ones."""
         return [(self.door_x, self.door_y, self.door_angle)] + self.additional_doors
 
+    def get_wall_segments(self) -> List[Tuple[Tuple[float, float], Tuple[float, float]]]:
+        """Return wall segments as line segments, excluding door positions.
+        Returns list of ((x1, y1), (x2, y2)) tuples representing walls.
+        """
+        walls = []
+        door_width = 1.2  # Standard door width in meters
+
+        # Get all door positions
+        doors = self.all_doors
+
+        # Bottom wall (y = room.y)
+        bottom_doors = [(dx, dy, da) for dx, dy, da in doors if da == 270]
+        if bottom_doors:
+            # Split wall around doors
+            sorted_doors = sorted(bottom_doors, key=lambda d: d[0])
+            current_x = self.x
+            for door_x, door_y, _ in sorted_doors:
+                # Add wall segment before door
+                if current_x < door_x - door_width/2:
+                    walls.append(((current_x, self.y), (door_x - door_width/2, self.y)))
+                current_x = door_x + door_width/2
+            # Add remaining segment
+            if current_x < self.x + self.width:
+                walls.append(((current_x, self.y), (self.x + self.width, self.y)))
+        else:
+            walls.append(((self.x, self.y), (self.x + self.width, self.y)))
+
+        # Top wall (y = room.y + room.height)
+        top_doors = [(dx, dy, da) for dx, dy, da in doors if da == 90]
+        if top_doors:
+            sorted_doors = sorted(top_doors, key=lambda d: d[0])
+            current_x = self.x
+            for door_x, door_y, _ in sorted_doors:
+                if current_x < door_x - door_width/2:
+                    walls.append(((current_x, self.y + self.height), (door_x - door_width/2, self.y + self.height)))
+                current_x = door_x + door_width/2
+            if current_x < self.x + self.width:
+                walls.append(((current_x, self.y + self.height), (self.x + self.width, self.y + self.height)))
+        else:
+            walls.append(((self.x, self.y + self.height), (self.x + self.width, self.y + self.height)))
+
+        # Left wall (x = room.x)
+        left_doors = [(dx, dy, da) for dx, dy, da in doors if da == 180]
+        if left_doors:
+            sorted_doors = sorted(left_doors, key=lambda d: d[1])
+            current_y = self.y
+            for door_x, door_y, _ in sorted_doors:
+                if current_y < door_y - door_width/2:
+                    walls.append(((self.x, current_y), (self.x, door_y - door_width/2)))
+                current_y = door_y + door_width/2
+            if current_y < self.y + self.height:
+                walls.append(((self.x, current_y), (self.x, self.y + self.height)))
+        else:
+            walls.append(((self.x, self.y), (self.x, self.y + self.height)))
+
+        # Right wall (x = room.x + room.width)
+        right_doors = [(dx, dy, da) for dx, dy, da in doors if da == 0]
+        if right_doors:
+            sorted_doors = sorted(right_doors, key=lambda d: d[1])
+            current_y = self.y
+            for door_x, door_y, _ in sorted_doors:
+                if current_y < door_y - door_width/2:
+                    walls.append(((self.x + self.width, current_y), (self.x + self.width, door_y - door_width/2)))
+                current_y = door_y + door_width/2
+            if current_y < self.y + self.height:
+                walls.append(((self.x + self.width, current_y), (self.x + self.width, self.y + self.height)))
+        else:
+            walls.append(((self.x + self.width, self.y), (self.x + self.width, self.y + self.height)))
+
+        return walls
+
 
 # T005: Floor dataclass
 @dataclass
 class Floor:
     """Represents a single level of the building."""
-    name: str  # "F1", "F3", "F4"
+    name: str  # "F1", "F2", "F3", "F4"
     rooms: List[Room]
     corridors: List[Tuple[float, float]]
     exits: List[Tuple[float, float]]
@@ -94,7 +165,7 @@ class Floor:
 class Stairwell:
     """Represents vertical connection between floors."""
     name: str
-    connected_floors: List[str]  # ["F1", "F3", "F4"]
+    connected_floors: List[str]  # ["F1", "F2", "F3", "F4"]
     position_per_floor: Dict[str, Tuple[float, float]]
     floor_height: float = 3.0  # Vertical distance per floor (meters)
 
@@ -149,7 +220,7 @@ class MultiFloorBuildingInspection:
     """Main simulation class for multi-floor building inspection."""
 
     def __init__(self):
-        """Initialize 3-floor building with rooms from F1, F3, F4 PDFs."""
+        """Initialize 4-floor building with rooms from F1, F2, F3, F4 floor plans."""
         # T010: Transcribe F1 rooms from F1.pdf (CORRECTED from actual PDF layout)
         # Floor 1 dimensions: 20000mm x 18000mm = 20m x 18m
         # Converting mm to meters by dividing by 1000
@@ -164,7 +235,24 @@ class MultiFloorBuildingInspection:
             Room("Equipment", "F1", 16, 0, 4, 4, 18, 4, 90, 1.8),  # Bottom-right, door on top (height=4m to match hallway)
         ]
 
-        # T011: Transcribe F3 rooms from F3.pdf (CORRECTED from actual PDF layout)
+        # T011: Transcribe F2 rooms from F2.png (CORRECTED layout)
+        # Floor 2 dimensions: 20000mm x 20000mm = 20m x 20m
+        # Coordinate system: origin at bottom-left
+        # Horizontal sections: 4m + 8m + 8m = 20m width (Toilet | Reading Room | Reference at top)
+        # Bottom sections: 5m + 10m + 2m + 3m = 20m (Stairwell | Exhibition | hallway | Computer/Power)
+        # Vertical: 4m (bottom) + 1m (hallway) + 2m (Power) + 7m (Computer) + 1m (hallway) + 5m (top) = 20m
+        f2_rooms = [
+            Room("Toilet", "F2", 0, 15, 4, 5, 2, 15, 270, 1.0),  # Top row: y=15-20m (5m tall), door at bottom
+            Room("Reading Room", "F2", 4, 15, 8, 5, 8, 15, 270, 1.5),  # Top row: y=15-20m (5m tall), door at bottom
+            Room("Reference", "F2", 12, 15, 8, 5, 16, 15, 270, 1.5),  # Top row: y=15-20m (5m tall), door at bottom
+            Room("Reading Room", "F2", 0, 7, 15, 7, 7.5, 14, 90, 1.5, [(7.5, 7, 270)]),  # Middle: y=7-14m (7m tall), width=15m, door at TOP, second door at BOTTOM
+            Room("Computer Room", "F2", 17, 7, 3, 7, 17, 11, 180, 1.8),  # Right side: x=17-20m, y=7-14m (7m tall), width=3m, door on left wall, top wall aligned with Reading Room
+            Room("Power Supply", "F2", 17, 5, 3, 2, 17, 6, 180, 1.8),  # Right side: x=17-20m, y=5-7m (2m tall), directly below Computer Room, door on left wall
+            Room("Stairwell", "F2", 0, 0, 5, 4, 2.5, 4, 90, 1.0),  # Bottom-left: y=0-4m, door on top
+            Room("Public Exhibition Hall", "F2", 5, 0, 10, 4, 10, 4, 90, 1.5),  # Bottom-middle: y=0-4m, width=10m, door on top
+        ]
+
+        # T012: Transcribe F3 rooms from F3.pdf (CORRECTED from actual PDF layout)
         # Floor 3 dimensions: 20000mm x 18000mm = 20m x 18m (same as F1)
         # Coordinate system: origin at bottom-left
         # Vertical sections: 4m (bottom) + 2m (corridor) + 7m (middle) + 2m (corridor) + 3m (top) = 18m total
@@ -178,7 +266,7 @@ class MultiFloorBuildingInspection:
             Room("Toilet", "F3", 5, 0, 5, 4, 7.5, 4, 90, 1.0),  # Bottom row: y=0-4m, door on top
         ]
 
-        # T012: Transcribe F4 rooms from F4.pdf (CORRECTED from actual PDF layout)
+        # T013: Transcribe F4 rooms from F4.pdf (CORRECTED from actual PDF layout)
         # Floor 4 dimensions: 20000mm x 18000mm = 20m x 18m (same as F1 and F3)
         # Coordinate system: origin at bottom-left
         # Vertical sections: 4m (bottom) + 2m (corridor) + 7m (middle) + 2m (corridor) + 3m (top) = 18m total
@@ -192,22 +280,24 @@ class MultiFloorBuildingInspection:
             Room("Toilet", "F4", 5, 0, 5, 4, 7.5, 4, 90, 1.0),  # Bottom row: y=0-4m, door on top
         ]
 
-        # T013: Create 3 Floor instances (CORRECTED to match actual PDF layouts)
+        # T014: Create 4 Floor instances (UPDATED: F1, F2, F3, F4)
         self.floors = [
             Floor("F1", f1_rooms, [(5, 9), (9, 9), (5, 5), (9, 5)], [(1, 4)], 0.0),  # Ground floor, exit at Entrance
-            Floor("F3", f3_rooms, [(8.5, 5), (8.5, 14), (5, 2)], [(2.5, 2)], 3.0),  # 3m above F1, corridors at y=5 and y=14
-            Floor("F4", f4_rooms, [(8.5, 5), (8.5, 14), (5, 2)], [(2.5, 2)], 6.0),  # 6m above F1, corridors at y=5 and y=14
+            Floor("F2", f2_rooms, [(8.5, 5), (8.5, 14), (5, 2)], [(2.5, 2)], 3.0),  # 3m above F1
+            Floor("F3", f3_rooms, [(8.5, 5), (8.5, 14), (5, 2)], [(2.5, 2)], 6.0),  # 6m above F1
+            Floor("F4", f4_rooms, [(8.5, 5), (8.5, 14), (5, 2)], [(2.5, 2)], 9.0),  # 9m above F1
         ]
 
         # Collect all rooms
-        self.rooms = f1_rooms + f3_rooms + f4_rooms
+        self.rooms = f1_rooms + f2_rooms + f3_rooms + f4_rooms
 
-        # T014: Create Stairwell connecting F1↔F3↔F4 (CORRECTED to match PDF positions)
+        # T015: Create Stairwell connecting F1↔F2↔F3↔F4 (4 floors)
         self.stairwell = Stairwell(
             "Main Stairwell",
-            ["F1", "F3", "F4"],
+            ["F1", "F2", "F3", "F4"],
             {
                 "F1": (2.5, 2),   # Stairwell door position on F1 (center of stairwell)
+                "F2": (2.5, 2),   # Stairwell door position on F2 (vertically aligned)
                 "F3": (2.5, 2),   # Stairwell door position on F3 (vertically aligned)
                 "F4": (2.5, 2),   # Stairwell door position on F4 (vertically aligned)
             },
@@ -216,10 +306,83 @@ class MultiFloorBuildingInspection:
 
         # Exit positions (main exits for return-to-exit logic)
         self.exit1 = (1, 4)  # F1 Entrance door
-        self.exit2 = (2.5, 2)  # F3/F4 Stairwell (to go down to F1 exit)
+        self.exit2 = (2.5, 2)  # F2/F4 Stairwell (to go down to F1 exit)
 
         # Define hallway networks for each floor
         self._build_hallway_networks()
+
+        # Enhance hallway graphs with door connections (after rooms are defined)
+        for floor_name in ["F1", "F2", "F3", "F4"]:
+            self._enhance_hallway_graph_with_doors(floor_name)
+
+    # ========================================================================
+    # Geometric Helper Methods (transplanted from single-level building)
+    # ========================================================================
+
+    def _line_intersects_segment(self, px1, py1, px2, py2, qx1, qy1, qx2, qy2):
+        """Check if two line segments intersect using CCW algorithm."""
+        def ccw(A, B, C):
+            return (C[1] - A[1]) * (B[0] - A[0]) > (B[1] - A[1]) * (C[0] - A[0])
+
+        A, B = (px1, py1), (px2, py2)
+        C, D = (qx1, qy1), (qx2, qy2)
+        return ccw(A, C, D) != ccw(B, C, D) and ccw(A, B, C) != ccw(A, B, D)
+
+    def _point_near_door(self, x, y, room, tolerance=0.5):
+        """Check if a point is near any door of a room."""
+        for door_x, door_y, _ in room.all_doors:
+            if abs(x - door_x) < tolerance and abs(y - door_y) < tolerance:
+                return True
+        return False
+
+    def _line_crosses_wall(self, x1, y1, x2, y2, room):
+        """Check if a line segment crosses any wall of a room (excluding doors)."""
+        wall_segments = room.get_wall_segments()
+
+        for (wx1, wy1), (wx2, wy2) in wall_segments:
+            if self._line_intersects_segment(x1, y1, x2, y2, wx1, wy1, wx2, wy2):
+                return True
+        return False
+
+    def _point_in_room(self, x, y, room):
+        """Check if a point is inside a room."""
+        return (room.x <= x <= room.x + room.width and
+                room.y <= y <= room.y + room.height)
+
+    def _can_move_directly(self, pos1, pos2, floor_name):
+        """Check if two positions can be connected directly without crossing walls.
+
+        This is the core wall-respect validation method.
+        """
+        x1, y1 = pos1
+        x2, y2 = pos2
+
+        # Get all rooms on this floor
+        floor = next((f for f in self.floors if f.name == floor_name), None)
+        if not floor:
+            return True
+
+        # Check each room for wall collisions
+        for room in floor.rooms:
+            # Check if both points are in the same room (allow internal movement)
+            p1_in_room = self._point_in_room(x1, y1, room)
+            p2_in_room = self._point_in_room(x2, y2, room)
+
+            if p1_in_room and p2_in_room:
+                # Both in same room - allow
+                continue
+
+            # Check if line crosses any wall
+            if self._line_crosses_wall(x1, y1, x2, y2, room):
+                # Wall crossing detected - only allow if through a door
+                p1_near_door = self._point_near_door(x1, y1, room, tolerance=0.6)
+                p2_near_door = self._point_near_door(x2, y2, room, tolerance=0.6)
+
+                # Allow if entering/exiting through door
+                if not (p1_near_door or p2_near_door):
+                    return False
+
+        return True
 
     def _build_hallway_networks(self):
         """Build hallway graph for each floor based on actual corridor layout."""
@@ -229,6 +392,9 @@ class MultiFloorBuildingInspection:
         # Vertical corridor at x=5 (between Entrance/Stairwell and activity areas)
         # Horizontal corridors at y=4, y=11, y=13
         f1_hallways = [
+            # Exit and stairwell connections
+            ((1, 4), (5, 4)),   # Exit to main corridor
+            ((2.5, 2), (5, 2)), # Stairwell to vertical corridor
             # Main vertical corridor (x=5)
             ((5, 2), (5, 4)),   # Stairwell to lower horizontal
             ((5, 4), (5, 11)),  # Lower to upper horizontal
@@ -238,7 +404,7 @@ class MultiFloorBuildingInspection:
             ((9, 4), (12.5, 4)), # To self-service door
             ((12.5, 4), (18, 4)), # To Equipment door
             # Middle horizontal corridor (y=11)
-            ((2.5, 11), (5, 11)), # Entrance door to vertical
+            ((2.5, 11), (5, 11)), # Entrance top door to vertical (ADDED: connects to Entrance's additional door)
             ((5, 11), (9, 11)),   # Vertical to Public Activity
             ((9, 11), (14.5, 11)), # To Public Activity door
             # Top horizontal corridor (y=13)
@@ -247,41 +413,88 @@ class MultiFloorBuildingInspection:
         ]
         self.hallway_graphs["F1"] = self._build_graph_from_segments(f1_hallways)
 
-        # F3 Hallway Network - corridors at y=4-6, y=13-15
-        f3_hallways = [
+        # F2 Hallway Network - vertical hallway at x=15-17, horizontal at y=4-5, y=14-15
+        f2_hallways = [
+            # Stairwell connection
+            ((2.5, 2), (2.5, 4)), # Stairwell to corridor
             # Bottom horizontal corridor (y=4-5)
             ((2.5, 4), (5, 4)),   # Stairwell to corridor
-            ((5, 4), (7.5, 4)),   # To Toilet door
-            ((7.5, 4), (10, 4)),  # Corridor continues
-            # Lower vertical access (around y=6)
-            ((7.5, 4), (7.5, 6)), # Vertical to Children's Exhibition bottom door
-            ((10, 4), (10, 6)),   # Side corridor access
-            # Upper horizontal corridor (y=13-14)
-            ((7.5, 13), (7.5, 15)), # Children's Exhibition top door to upper corridor
+            ((5, 4), (7.5, 4)),   # To Reading Room bottom door area (ADDED: waypoint for Reading Room's additional door)
+            ((7.5, 4), (10, 4)),  # Continue to Public Exhibition Hall door
+            ((10, 4), (16, 4)),   # Corridor extends to vertical hallway (FIXED: connect to x=16)
+            ((16, 4), (16, 5)),   # Short vertical to connect to Power Supply level (FIXED: start at x=16)
+            # Vertical hallway (x=16, from y=5 to y=14) - corridor along left wall
+            ((16, 5), (16, 6)),   # Power Supply door access
+            ((16, 6), (16, 7)),   # Continue up
+            ((16, 7), (16, 11)),  # Computer Room door access (left wall of hallway)
+            ((16, 11), (16, 14)), # Continue to horizontal hallway at y=14-15
+            # Lower vertical access for Reading Room bottom door (ADDED: connects (7.5, 4) to (7.5, 7))
+            ((7.5, 4), (7.5, 7)), # Vertical to Reading Room bottom door
+            # Middle vertical corridor connecting Reading Room's top door (7.5, 14) to upper corridor
+            ((7.5, 7), (7.5, 14)), # Vertical from Reading Room bottom door to top door (FIXED: connect top door)
+            ((7.5, 14), (7.5, 15)), # Reading Room top door to upper corridor
+            # Middle horizontal corridor (y=14-15) - between Computer Room/Reading Room top and Reference
+            ((7.5, 14), (16, 14)), # Connect Reading Room top area to Computer Room area (FIXED: add horizontal connection)
+            ((16, 14), (18, 14)), # Hallway above Computer Room (aligned with Reading Room top)
+            ((18, 14), (18, 15)), # Corner connection to top hallway
+            # Upper horizontal corridor (y=15)
+            ((2, 15), (4, 15)),     # Toilet door area
+            ((4, 15), (8, 15)),     # Reading Room door
+            ((8, 15), (12, 15)),    # Continue
+            ((12, 15), (16, 15)),   # Reference door area
+            ((16, 15), (18, 15)),   # Connect to Computer Room area
+        ]
+        self.hallway_graphs["F2"] = self._build_graph_from_segments(f2_hallways)
+
+        # F3 Hallway Network - similar structure to F4
+        f3_hallways = [
+            # Stairwell connection
+            ((2.5, 2), (2.5, 4)), # Stairwell to corridor
+            # Bottom horizontal corridor (y=4-5)
+            ((2.5, 4), (5, 4)),   # Stairwell to Toilet
+            ((5, 4), (7.5, 4)),   # Toilet to main corridor
+            ((7.5, 4), (10, 4)),  # Corridor extends
+            # Lower vertical access
+            ((7.5, 4), (7.5, 6)),  # To Children's Exhibition bottom door
+            ((10, 4), (10, 6)),    # Vertical segment
+            # Middle vertical corridor for Children's Exhibition Room (ADDED: connects bottom and top doors)
+            ((7.5, 6), (7.5, 13)), # Vertical corridor from bottom door to top door of Children's Exhibition Room
+            # Upper horizontal corridor (y=13-15)
+            ((7.5, 13), (7.5, 15)), # Children's Exhibition top door to upper corridor (ADDED: waypoint for top door)
+            ((7.5, 13), (15, 13)), # Horizontal corridor at y=13 connecting to side corridor (FIXED: connect to (15, 13))
             ((2, 15), (7.5, 15)),   # Multi-media door area
-            ((7.5, 15), (10, 15)),  # Specialty Museum door area
-            ((10, 15), (18, 15)),   # To Erotic reading materials door
-            # Side corridor (x=17)
-            ((17, 2), (17, 6.5)),   # parent-child interaction door access
-            ((17, 6.5), (17, 13)),  # Extends vertically
+            ((7.5, 15), (10, 15)),  # Specialty Museum door
+            ((10, 15), (15, 15)),   # Continue towards side corridor
+            ((15, 15), (18, 15)),   # To Erotic reading materials door
+            # Side corridor (x=17) for parent-child interaction
+            ((15, 13), (17, 13)),   # Connect from main corridor to side corridor
+            ((17, 2), (17, 6.5)),   # Access to parent-child room
+            ((17, 6.5), (17, 13)),  # Continues along side
         ]
         self.hallway_graphs["F3"] = self._build_graph_from_segments(f3_hallways)
 
         # F4 Hallway Network - same structure as F3
         f4_hallways = [
+            # Stairwell connection
+            ((2.5, 2), (2.5, 4)), # Stairwell to corridor
             # Bottom horizontal corridor (y=4-5)
             ((2.5, 4), (5, 4)),
             ((5, 4), (7.5, 4)),
             ((7.5, 4), (10, 4)),
             # Lower vertical access
-            ((7.5, 4), (7.5, 6)),
+            ((7.5, 4), (7.5, 6)),  # To Professional Bookstore bottom door (ADDED: waypoint for bottom door)
             ((10, 4), (10, 6)),
-            # Upper horizontal corridor (y=13-14)
-            ((7.5, 13), (7.5, 15)),
+            # Middle vertical corridor for Professional Bookstore (ADDED: connects bottom and top doors)
+            ((7.5, 6), (7.5, 13)), # Vertical corridor from bottom door to top door of Professional Bookstore
+            # Upper horizontal corridor (y=13-15)
+            ((7.5, 13), (7.5, 15)), # Professional Bookstore top door to upper corridor (ADDED: waypoint for top door)
+            ((7.5, 13), (15, 13)), # Horizontal corridor at y=13 connecting to side corridor (FIXED: connect to (15, 13))
             ((2, 15), (7.5, 15)),
             ((7.5, 15), (8, 15)),
-            ((8, 15), (16, 15)),
+            ((8, 15), (15, 15)),
+            ((15, 15), (16, 15)),
             # Side corridor (x=17)
+            ((15, 13), (17, 13)),   # Connect from main corridor to side corridor
             ((17, 2), (17, 6.5)),
             ((17, 6.5), (17, 13)),
         ]
@@ -295,6 +508,41 @@ class MultiFloorBuildingInspection:
             graph[(x1, y1)].append((x2, y2))
             graph[(x2, y2)].append((x1, y1))
         return dict(graph)
+
+    def _enhance_hallway_graph_with_doors(self, floor_name):
+        """Add door positions to hallway graph and connect them to nearest hallway points."""
+        graph = self.hallway_graphs.get(floor_name, {})
+        floor = next((f for f in self.floors if f.name == floor_name), None)
+        if not floor:
+            return
+
+        from collections import defaultdict
+        enhanced_graph = defaultdict(list, graph)
+
+        # Add all door positions and connect to nearest hallway nodes
+        for room in floor.rooms:
+            for door_x, door_y, _ in room.all_doors:
+                door_pos = (door_x, door_y)
+
+                # Find nearest hallway point
+                min_dist = float('inf')
+                nearest_hall_point = None
+                for hall_point in graph.keys():
+                    d = abs(hall_point[0] - door_x) + abs(hall_point[1] - door_y)
+                    if d < min_dist and d < 5.0:  # Only connect if within 5 meters
+                        # Validate that connection doesn't cross walls
+                        if self._can_move_directly(door_pos, hall_point, floor_name):
+                            min_dist = d
+                            nearest_hall_point = hall_point
+
+                # Add bidirectional connection
+                if nearest_hall_point:
+                    if nearest_hall_point not in enhanced_graph[door_pos]:
+                        enhanced_graph[door_pos].append(nearest_hall_point)
+                    if door_pos not in enhanced_graph[nearest_hall_point]:
+                        enhanced_graph[nearest_hall_point].append(door_pos)
+
+        self.hallway_graphs[floor_name] = dict(enhanced_graph)
 
     def _find_nearest_hallway_point(self, pos, floor_name):
         """Find the nearest hallway junction to a given position."""
@@ -312,19 +560,27 @@ class MultiFloorBuildingInspection:
         return nearest
 
     def _hallway_distance_bfs(self, start, end, floor_name):
-        """Calculate shortest path distance through hallways using BFS."""
+        """Calculate shortest path distance through hallways using BFS with wall validation."""
         from collections import deque
 
         graph = self.hallway_graphs.get(floor_name, {})
         if not graph:
-            # Fallback to Manhattan distance
-            return abs(end[0] - start[0]) + abs(end[1] - start[1])
+            # Fallback to Euclidean distance
+            return distance(start[0], start[1], end[0], end[1])
 
         # Find nearest hallway points
         start_hall = self._find_nearest_hallway_point(start, floor_name)
         end_hall = self._find_nearest_hallway_point(end, floor_name)
 
-        # BFS to find shortest path
+        # Validate connection from start to start_hall
+        if not self._can_move_directly(start, start_hall, floor_name):
+            # Try direct path if hallway connection is blocked
+            if self._can_move_directly(start, end, floor_name):
+                return distance(start[0], start[1], end[0], end[1])
+            # Otherwise use hallway distance as approximation
+            pass
+
+        # BFS to find shortest path with wall validation
         queue = deque([(start_hall, 0)])
         visited = {start_hall}
 
@@ -332,18 +588,30 @@ class MultiFloorBuildingInspection:
             current, dist = queue.popleft()
 
             if current == end_hall:
-                # Add distances from actual positions to hallway points
-                start_offset = abs(start[0] - start_hall[0]) + abs(start[1] - start_hall[1])
-                end_offset = abs(end[0] - end_hall[0]) + abs(end[1] - end_hall[1])
-                return dist + start_offset + end_offset
+                # Validate end connection
+                if self._can_move_directly(end_hall, end, floor_name):
+                    # Add distances from actual positions to hallway points
+                    start_offset = distance(start[0], start[1], start_hall[0], start_hall[1])
+                    end_offset = distance(end[0], end[1], end_hall[0], end_hall[1])
+                    return dist + start_offset + end_offset
+                else:
+                    # Use approximation
+                    return dist + abs(start[0] - start_hall[0]) + abs(start[1] - start_hall[1]) + \
+                           abs(end[0] - end_hall[0]) + abs(end[1] - end_hall[1])
 
             for neighbor in graph.get(current, []):
                 if neighbor not in visited:
-                    visited.add(neighbor)
-                    edge_dist = abs(neighbor[0] - current[0]) + abs(neighbor[1] - current[1])
-                    queue.append((neighbor, dist + edge_dist))
+                    # Validate edge with wall collision detection
+                    if self._can_move_directly(current, neighbor, floor_name):
+                        visited.add(neighbor)
+                        edge_dist = distance(neighbor[0], neighbor[1], current[0], current[1])
+                        queue.append((neighbor, dist + edge_dist))
 
-        # If no path found, use Manhattan distance as fallback
+        # If no path found, try direct path
+        if self._can_move_directly(start, end, floor_name):
+            return distance(start[0], start[1], end[0], end[1])
+
+        # Fallback to Manhattan distance
         return abs(end[0] - start[0]) + abs(end[1] - start[1])
 
     # T015: get_path_distance for same-floor corridor distance via hallways
@@ -377,6 +645,52 @@ class MultiFloorBuildingInspection:
         vis = random.uniform(0.0, 0.8)
         p_halt = random.uniform(0.05, 0.3)
         return sweep_time_gt(room.area, vis, p_halt, room.complexity)
+
+    def _add_waypoint_path(self, person, target_pos, target_floor):
+        """Add a complete waypoint sequence from person's current position to target.
+
+        This ensures all paths are strictly constrained to waypoints in the hallway graph.
+        """
+        current_pos = (person.x, person.y)
+        current_floor = person.floor
+
+        if current_floor == target_floor:
+            # Same floor: get waypoint sequence through hallways
+            waypoint_path = self._get_hallway_path(current_pos, target_pos, current_floor)
+
+            # Add all waypoints (skip duplicates)
+            for waypoint in waypoint_path:
+                # Only add if it's different from current position
+                if len(person.path) == 0 or person.path[-1][:2] != waypoint:
+                    person.add_waypoint(waypoint[0], waypoint[1], current_floor)
+
+            # Update person's position to target
+            person.x, person.y = waypoint_path[-1][0], waypoint_path[-1][1]
+
+        else:
+            # Different floors: need stairwell transition
+            stair_pos_from = self.stairwell.get_position_on_floor(current_floor)
+            stair_pos_to = self.stairwell.get_position_on_floor(target_floor)
+
+            # 1. Path to stairwell on current floor
+            path_to_stair = self._get_hallway_path(current_pos, stair_pos_from, current_floor)
+            for waypoint in path_to_stair:
+                if len(person.path) == 0 or person.path[-1][:2] != waypoint:
+                    person.add_waypoint(waypoint[0], waypoint[1], current_floor)
+
+            # 2. Stairwell transition (just add waypoint on new floor)
+            person.floor = target_floor
+            if len(person.path) == 0 or person.path[-1][:2] != stair_pos_to:
+                person.add_waypoint(stair_pos_to[0], stair_pos_to[1], target_floor)
+
+            # 3. Path from stairwell to target on new floor
+            path_from_stair = self._get_hallway_path(stair_pos_to, target_pos, target_floor)
+            for waypoint in path_from_stair:
+                if len(person.path) == 0 or person.path[-1][:2] != waypoint:
+                    person.add_waypoint(waypoint[0], waypoint[1], target_floor)
+
+            # Update person's position to target
+            person.x, person.y = path_from_stair[-1][0], path_from_stair[-1][1]
 
     # T019: find_nearest_exit
     def find_nearest_exit(self, person):
@@ -463,18 +777,14 @@ class MultiFloorBuildingInspection:
             person_id, room, dist, move_time, sweep_time = best_assignment
             person = person1 if person_id == 1 else person2
 
-            # T018: Handle stairwell transition
-            if person.floor != room.floor:
-                # Move to stairwell
-                stair_pos = self.stairwell.get_position_on_floor(person.floor)
-                person.add_waypoint(stair_pos[0], stair_pos[1], person.floor)
-                # Transition to new floor via stairwell
-                stair_pos_new = self.stairwell.get_position_on_floor(room.floor)
-                person.floor = room.floor
-                person.add_waypoint(stair_pos_new[0], stair_pos_new[1], room.floor)
+            # Add waypoint sequence to room door (handles same-floor and cross-floor paths)
+            self._add_waypoint_path(person, room.door_position, room.floor)
 
-            # Move to room
-            person.move_to(room.door_x, room.door_y, room.floor, dist, move_time)
+            # Update person's distance and time
+            person.total_distance += dist
+            person.total_time += move_time
+
+            # Record room assignment
             person.assign_room(room, sweep_time)
             person.total_time += sweep_time
 
@@ -484,20 +794,19 @@ class MultiFloorBuildingInspection:
         for person in [person1, person2]:
             exit_pos, exit_floor, exit_dist = self.find_nearest_exit(person)
             current_floor = person.floor  # Save current floor before it changes
+
+            # Calculate exit time
             if person.floor != exit_floor:
-                # Go to stairwell
-                stair_pos = self.stairwell.get_position_on_floor(person.floor)
-                stair_dist = self.get_path_distance((person.x, person.y), stair_pos, current_floor)
-                person.add_waypoint(stair_pos[0], stair_pos[1], person.floor)
-                person.floor = exit_floor
-                # Move down floors
-                stair_pos_exit = self.stairwell.get_position_on_floor(exit_floor)
-                person.add_waypoint(stair_pos_exit[0], stair_pos_exit[1], exit_floor)
-                exit_time = exit_dist / 1.5 + self.stairwell.get_transition_time(person.floor, exit_floor, 0.75)
+                exit_time = exit_dist / 1.5 + self.stairwell.get_transition_time(current_floor, exit_floor, 0.75)
             else:
                 exit_time = exit_dist / 1.5
 
-            person.move_to(exit_pos[0], exit_pos[1], exit_floor, exit_dist, exit_time)
+            # Add waypoint sequence to exit
+            self._add_waypoint_path(person, exit_pos, exit_floor)
+
+            # Update distance and time
+            person.total_distance += exit_dist
+            person.total_time += exit_time
 
         return person1, person2
 
@@ -576,9 +885,12 @@ class MultiFloorBuildingInspection:
         for exit_pos in floor.exits:
             ax.plot(exit_pos[0], exit_pos[1], 'gs', markersize=10, label='Exit' if exit_pos == floor.exits[0] else '')
 
-        # Set axis properties (all floors are 20m × 18m)
+        # Set axis properties (F1,F4 are 20m×18m, F2 is 20m×20m)
         ax.set_xlim(-1, 21)  # All floors are 20m wide
-        ax.set_ylim(-1, 19)  # All floors are 18m tall
+        if floor.name == "F2":
+            ax.set_ylim(-1, 21)  # F2 is 20m tall
+        else:
+            ax.set_ylim(-1, 19)  # F1 and F4 are 18m tall
         ax.set_aspect('equal')
         ax.set_title(f'{floor.name} (Height: {floor.height_offset:.1f}m)', fontsize=12, fontweight='bold')
         ax.set_xlabel('X (meters)')
@@ -586,18 +898,31 @@ class MultiFloorBuildingInspection:
         ax.grid(True, alpha=0.3)
 
     def _get_hallway_path(self, start, end, floor_name):
-        """Get the actual path through hallways using BFS."""
+        """Get the actual path through hallways as a sequence of waypoints only.
+
+        Returns:
+            List of waypoint tuples (x, y) that form a valid path through the hallway network.
+            All returned points are guaranteed to be in the hallway graph (waypoints only).
+        """
         from collections import deque
 
         graph = self.hallway_graphs.get(floor_name, {})
         if not graph:
             return [start, end]
 
-        # Find nearest hallway points
-        start_hall = self._find_nearest_hallway_point(start, floor_name)
-        end_hall = self._find_nearest_hallway_point(end, floor_name)
+        # Check if start and end are already in the graph
+        start_in_graph = start in graph
+        end_in_graph = end in graph
 
-        # BFS to find shortest path and reconstruct it
+        # Use start/end directly if they're in the graph, otherwise find nearest
+        start_hall = start if start_in_graph else self._find_nearest_hallway_point(start, floor_name)
+        end_hall = end if end_in_graph else self._find_nearest_hallway_point(end, floor_name)
+
+        # If start and end are the same waypoint, return single point
+        if start_hall == end_hall:
+            return [start_hall]
+
+        # BFS to find shortest path through waypoints (NO WALL VALIDATION - graph already validated)
         queue = deque([(start_hall, [start_hall])])
         visited = {start_hall}
 
@@ -605,80 +930,95 @@ class MultiFloorBuildingInspection:
             current, path = queue.popleft()
 
             if current == end_hall:
-                # Reconstruct full path: start -> start_hall -> ... -> end_hall -> end
-                full_path = []
-                if start != start_hall:
-                    full_path.append(start)
-                full_path.extend(path)
-                if end != end_hall:
-                    full_path.append(end)
-                return full_path
+                # Return path as sequence of waypoints (no intermediate points)
+                return path
 
             for neighbor in graph.get(current, []):
                 if neighbor not in visited:
                     visited.add(neighbor)
                     queue.append((neighbor, path + [neighbor]))
 
-        # Fallback if no path found
-        return [start, end]
+        # CRITICAL: If no path found, this means the graph is disconnected!
+        # Try to find ANY path to end_hall from any visited node
+        print(f"WARNING: No direct path from {start_hall} to {end_hall} on {floor_name}")
+        print(f"  Visited {len(visited)} nodes, graph has {len(graph)} nodes")
+
+        # Return single-point path to avoid disconnected segments
+        return [start_hall]
 
     # T024: _draw_paths_on_floor helper
     def _draw_paths_on_floor(self, ax, floor, person, color, person_id):
-        """Trace personnel path on a specific floor through hallway centerlines."""
-        # Filter waypoints for this floor
-        floor_waypoints = [(wp[0], wp[1]) for wp in person.path if wp[2] == floor.name]
+        """Trace personnel path on a specific floor as strict waypoint-to-waypoint segments."""
+        # Filter waypoints for this floor with their global indices
+        floor_waypoints_with_indices = [(i, wp[0], wp[1]) for i, wp in enumerate(person.path) if wp[2] == floor.name]
 
-        if not floor_waypoints:
+        if not floor_waypoints_with_indices:
             return
 
-        # Draw path segments through actual hallways
-        for i in range(len(floor_waypoints) - 1):
-            start_pos = floor_waypoints[i]
-            end_pos = floor_waypoints[i + 1]
+        # Draw path segments ONLY between consecutive waypoints (strict constraint)
+        for i in range(len(floor_waypoints_with_indices) - 1):
+            idx1, x1, y1 = floor_waypoints_with_indices[i]
+            idx2, x2, y2 = floor_waypoints_with_indices[i + 1]
 
-            # Get hallway path between waypoints
-            hallway_path = self._get_hallway_path(start_pos, end_pos, floor.name)
+            # Draw direct line between waypoints (no intermediate interpolation)
+            ax.plot([x1, x2], [y1, y2], color=color, linewidth=2.5, alpha=0.8, linestyle='-', zorder=5)
 
-            # Draw the path along hallway centerlines
-            for j in range(len(hallway_path) - 1):
-                x1, y1 = hallway_path[j]
-                x2, y2 = hallway_path[j + 1]
-                ax.plot([x1, x2], [y1, y2], color=color, linewidth=2.5, alpha=0.8, linestyle='-')
+            # Add arrow to show direction
+            dx, dy = x2 - x1, y2 - y1
+            dist = (dx**2 + dy**2)**0.5
+            if dist > 0.5:  # Only add arrow if segment is long enough
+                mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
+                ax.annotate('', xy=(x2, y2), xytext=(mid_x, mid_y),
+                          arrowprops=dict(arrowstyle='->', color=color, lw=2, alpha=0.7), zorder=6)
 
-            # Add sequence numbers at waypoints (door positions)
-            ax.text(start_pos[0], start_pos[1], str(i + 1), fontsize=8, color=color,
-                   bbox=dict(boxstyle='circle', facecolor='white', alpha=0.8))
+        # Mark waypoints with order numbers
+        for i, (global_idx, x, y) in enumerate(floor_waypoints_with_indices):
+            # Draw small dot at waypoint
+            ax.plot(x, y, 'o', color=color, markersize=6, alpha=0.8,
+                   markeredgecolor='white', markeredgewidth=1, zorder=8)
+
+            # Add order number (global index + 1 for 1-based numbering)
+            order_num = global_idx + 1
+            ax.text(x, y, str(order_num), fontsize=7, color='white',
+                   fontweight='bold', ha='center', va='center', zorder=9,
+                   bbox=dict(boxstyle='circle,pad=0.25', facecolor=color,
+                           edgecolor='white', linewidth=1, alpha=0.9))
 
         # T027: Add START marker at first waypoint
-        if floor_waypoints:
-            start_x, start_y = floor_waypoints[0]
-            ax.plot(start_x, start_y, marker='o', color=color, markersize=12,
-                   markeredgecolor='black', markeredgewidth=2)
-            ax.text(start_x, start_y - 0.8, f'START {person_id}', fontsize=9,
+        if floor_waypoints_with_indices:
+            start_idx, start_x, start_y = floor_waypoints_with_indices[0]
+            ax.plot(start_x, start_y, marker='o', color=color, markersize=14,
+                   markeredgecolor='black', markeredgewidth=2.5, zorder=10)
+            ax.text(start_x, start_y - 1.0, f'START {person_id}', fontsize=10,
                    color=color, fontweight='bold', ha='center',
-                   bbox=dict(boxstyle='round', facecolor='white', alpha=0.9))
+                   bbox=dict(boxstyle='round,pad=0.4', facecolor='white',
+                           edgecolor=color, linewidth=2, alpha=0.95), zorder=11)
 
             # T027: Add END marker at last waypoint
-            end_x, end_y = floor_waypoints[-1]
-            ax.plot(end_x, end_y, marker='s', color=color, markersize=12,
-                   markeredgecolor='black', markeredgewidth=2)
-            ax.text(end_x, end_y - 0.8, f'END {person_id}', fontsize=9,
+            end_idx, end_x, end_y = floor_waypoints_with_indices[-1]
+            ax.plot(end_x, end_y, marker='s', color=color, markersize=14,
+                   markeredgecolor='black', markeredgewidth=2.5, zorder=10)
+            ax.text(end_x, end_y - 1.0, f'END {person_id}', fontsize=10,
                    color=color, fontweight='bold', ha='center',
-                   bbox=dict(boxstyle='round', facecolor='white', alpha=0.9))
+                   bbox=dict(boxstyle='round,pad=0.4', facecolor='white',
+                           edgecolor=color, linewidth=2, alpha=0.95), zorder=11)
 
     # T021, T025, T028: Main visualize method
     def visualize(self, person1, person2):
-        """Generate 3-floor visualization with personnel paths."""
+        """Generate 4-floor visualization with personnel paths in 2x2 grid layout."""
         import matplotlib.pyplot as plt
         import os
 
-        # T021: Create figure with 3-floor vertical stacking
-        fig, axes = plt.subplots(3, 1, figsize=(18, 24))
-        fig.suptitle('Multi-Floor Building Inspection Simulation', fontsize=16, fontweight='bold')
+        # T021: Create figure with 2x2 grid layout for better look-and-feel
+        fig, axes = plt.subplots(2, 2, figsize=(24, 20))
+        fig.suptitle('Multi-Floor Building Inspection Simulation', fontsize=18, fontweight='bold', y=0.995)
 
-        # Draw each floor
+        # Flatten axes array for easier indexing
+        axes_flat = axes.flatten()
+
+        # Draw each floor in the 2x2 grid (F1: top-left, F2: top-right, F3: bottom-left, F4: bottom-right)
         for idx, floor in enumerate(self.floors):
-            ax = axes[idx]
+            ax = axes_flat[idx]
 
             # T022, T023, T026: Draw floor layout with rooms and doors
             self._draw_floor_layout(ax, floor, person1, person2)
@@ -687,7 +1027,7 @@ class MultiFloorBuildingInspection:
             self._draw_paths_on_floor(ax, floor, person1, 'red', 1)
             self._draw_paths_on_floor(ax, floor, person2, 'blue', 2)
 
-        # T025: Add stairwell transition visual markers (dashed purple lines between subplots)
+        # T025: Add stairwell transition visual markers
         # Analyze stairwell transitions for each person
         for person, color in [(person1, 'red'), (person2, 'blue')]:
             for i in range(len(person.path) - 1):
@@ -699,19 +1039,20 @@ class MultiFloorBuildingInspection:
                     floor1_idx = [f.name for f in self.floors].index(floor1)
                     floor2_idx = [f.name for f in self.floors].index(floor2)
 
-                    # Draw annotation on both floors
-                    axes[floor1_idx].annotate(
+                    # Draw annotation on both floors (using flattened axes)
+                    axes_flat[floor1_idx].annotate(
                         f'→ {floor2}', xy=(x1, y1), xytext=(x1 + 1, y1 + 1),
                         fontsize=8, color='purple', fontweight='bold',
                         arrowprops=dict(arrowstyle='->', color='purple', linestyle='--', linewidth=2)
                     )
-                    axes[floor2_idx].annotate(
+                    axes_flat[floor2_idx].annotate(
                         f'← {floor1}', xy=(x2, y2), xytext=(x2 + 1, y2 + 1),
                         fontsize=8, color='purple', fontweight='bold',
                         arrowprops=dict(arrowstyle='->', color='purple', linestyle='--', linewidth=2)
                     )
 
-        plt.tight_layout(rect=[0, 0, 1, 0.98])
+        # Adjust layout with more spacing for 2x2 grid
+        plt.tight_layout(rect=[0, 0, 1, 0.99], h_pad=2.0, w_pad=2.0)
 
         # T028: Save visualization to ./output/multi_floor_building_inspection.png at 300 DPI
         os.makedirs('./output', exist_ok=True)
