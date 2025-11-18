@@ -1005,17 +1005,20 @@ class MultiFloorBuildingInspection:
 
     # T021, T025, T028: Main visualize method
     def visualize(self, person1, person2):
-        """Generate 4-floor visualization with personnel paths."""
+        """Generate 4-floor visualization with personnel paths in 2x2 grid layout."""
         import matplotlib.pyplot as plt
         import os
 
-        # T021: Create figure with 4-floor vertical stacking
-        fig, axes = plt.subplots(4, 1, figsize=(18, 32))
-        fig.suptitle('Multi-Floor Building Inspection Simulation', fontsize=16, fontweight='bold')
+        # T021: Create figure with 2x2 grid layout for better look-and-feel
+        fig, axes = plt.subplots(2, 2, figsize=(24, 20))
+        fig.suptitle('Multi-Floor Building Inspection Simulation', fontsize=18, fontweight='bold', y=0.995)
 
-        # Draw each floor
+        # Flatten axes array for easier indexing
+        axes_flat = axes.flatten()
+
+        # Draw each floor in the 2x2 grid (F1: top-left, F2: top-right, F3: bottom-left, F4: bottom-right)
         for idx, floor in enumerate(self.floors):
-            ax = axes[idx]
+            ax = axes_flat[idx]
 
             # T022, T023, T026: Draw floor layout with rooms and doors
             self._draw_floor_layout(ax, floor, person1, person2)
@@ -1024,7 +1027,7 @@ class MultiFloorBuildingInspection:
             self._draw_paths_on_floor(ax, floor, person1, 'red', 1)
             self._draw_paths_on_floor(ax, floor, person2, 'blue', 2)
 
-        # T025: Add stairwell transition visual markers (dashed purple lines between subplots)
+        # T025: Add stairwell transition visual markers
         # Analyze stairwell transitions for each person
         for person, color in [(person1, 'red'), (person2, 'blue')]:
             for i in range(len(person.path) - 1):
@@ -1036,19 +1039,20 @@ class MultiFloorBuildingInspection:
                     floor1_idx = [f.name for f in self.floors].index(floor1)
                     floor2_idx = [f.name for f in self.floors].index(floor2)
 
-                    # Draw annotation on both floors
-                    axes[floor1_idx].annotate(
+                    # Draw annotation on both floors (using flattened axes)
+                    axes_flat[floor1_idx].annotate(
                         f'→ {floor2}', xy=(x1, y1), xytext=(x1 + 1, y1 + 1),
                         fontsize=8, color='purple', fontweight='bold',
                         arrowprops=dict(arrowstyle='->', color='purple', linestyle='--', linewidth=2)
                     )
-                    axes[floor2_idx].annotate(
+                    axes_flat[floor2_idx].annotate(
                         f'← {floor1}', xy=(x2, y2), xytext=(x2 + 1, y2 + 1),
                         fontsize=8, color='purple', fontweight='bold',
                         arrowprops=dict(arrowstyle='->', color='purple', linestyle='--', linewidth=2)
                     )
 
-        plt.tight_layout(rect=[0, 0, 1, 0.98])
+        # Adjust layout with more spacing for 2x2 grid
+        plt.tight_layout(rect=[0, 0, 1, 0.99], h_pad=2.0, w_pad=2.0)
 
         # T028: Save visualization to ./output/multi_floor_building_inspection.png at 300 DPI
         os.makedirs('./output', exist_ok=True)
