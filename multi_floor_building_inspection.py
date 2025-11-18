@@ -585,28 +585,68 @@ class MultiFloorBuildingInspection:
         ax.set_ylabel('Y (meters)')
         ax.grid(True, alpha=0.3)
 
+    def _get_hallway_path(self, start, end, floor_name):
+        """Get the actual path through hallways using BFS."""
+        from collections import deque
+
+        graph = self.hallway_graphs.get(floor_name, {})
+        if not graph:
+            return [start, end]
+
+        # Find nearest hallway points
+        start_hall = self._find_nearest_hallway_point(start, floor_name)
+        end_hall = self._find_nearest_hallway_point(end, floor_name)
+
+        # BFS to find shortest path and reconstruct it
+        queue = deque([(start_hall, [start_hall])])
+        visited = {start_hall}
+
+        while queue:
+            current, path = queue.popleft()
+
+            if current == end_hall:
+                # Reconstruct full path: start -> start_hall -> ... -> end_hall -> end
+                full_path = []
+                if start != start_hall:
+                    full_path.append(start)
+                full_path.extend(path)
+                if end != end_hall:
+                    full_path.append(end)
+                return full_path
+
+            for neighbor in graph.get(current, []):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append((neighbor, path + [neighbor]))
+
+        # Fallback if no path found
+        return [start, end]
+
     # T024: _draw_paths_on_floor helper
     def _draw_paths_on_floor(self, ax, floor, person, color, person_id):
-        """Trace personnel path on a specific floor."""
+        """Trace personnel path on a specific floor through hallway centerlines."""
         # Filter waypoints for this floor
         floor_waypoints = [(wp[0], wp[1]) for wp in person.path if wp[2] == floor.name]
 
         if not floor_waypoints:
             return
 
-        # Draw path segments using Manhattan (orthogonal) paths through hallways
+        # Draw path segments through actual hallways
         for i in range(len(floor_waypoints) - 1):
-            x1, y1 = floor_waypoints[i]
-            x2, y2 = floor_waypoints[i + 1]
+            start_pos = floor_waypoints[i]
+            end_pos = floor_waypoints[i + 1]
 
-            # Draw Manhattan path (horizontal then vertical, or vice versa)
-            # Choose the path that goes through the hallway
-            mid_x, mid_y = x1, y2  # Try horizontal first, then vertical
-            ax.plot([x1, mid_x], [y1, mid_y], color=color, linewidth=2, alpha=0.7, linestyle='-')
-            ax.plot([mid_x, x2], [mid_y, y2], color=color, linewidth=2, alpha=0.7, linestyle='-')
+            # Get hallway path between waypoints
+            hallway_path = self._get_hallway_path(start_pos, end_pos, floor.name)
 
-            # Add sequence numbers at waypoints
-            ax.text(x1, y1, str(i + 1), fontsize=8, color=color,
+            # Draw the path along hallway centerlines
+            for j in range(len(hallway_path) - 1):
+                x1, y1 = hallway_path[j]
+                x2, y2 = hallway_path[j + 1]
+                ax.plot([x1, x2], [y1, y2], color=color, linewidth=2.5, alpha=0.8, linestyle='-')
+
+            # Add sequence numbers at waypoints (door positions)
+            ax.text(start_pos[0], start_pos[1], str(i + 1), fontsize=8, color=color,
                    bbox=dict(boxstyle='circle', facecolor='white', alpha=0.8))
 
         # T027: Add START marker at first waypoint
